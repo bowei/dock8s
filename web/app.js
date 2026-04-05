@@ -89,6 +89,45 @@ function selectItem(li) {
   }
 }
 
+function resetView() {
+  mainContainer.innerHTML = '';
+  if (restoreFromHash(window.location.hash.substring(1), typeData, mainContainer, makeColumn)) {
+    return;
+  }
+  if (startTypes && startTypes[0]) {
+    const col = makeColumn(startTypes[0]);
+    if (col) mainContainer.appendChild(col);
+  } else {
+    const firstTypeName = Object.keys(typeData)[0];
+    if (firstTypeName) {
+      const col = makeColumn(firstTypeName);
+      if (col) mainContainer.appendChild(col);
+    }
+  }
+}
+
+function connectLiveReload() {
+  const es = new EventSource('/events');
+  es.addEventListener('reload', async () => {
+    console.log('Live reload: fetching new data...');
+    try {
+      const resp = await fetch('/data.json?t=' + Date.now());
+      if (!resp.ok) return;
+      const { types, startType } = await resp.json();
+      Object.keys(typeData).forEach(k => delete typeData[k]);
+      Object.assign(typeData, types);
+      if (startTypes) startTypes[0] = startType;
+      resetView();
+      console.log('Live reload: done');
+    } catch (e) {
+      console.error('Live reload failed:', e);
+    }
+  });
+  es.onerror = () => {
+    es.close();
+  };
+}
+
 function init() {
   console.log('App initializing...');
 
@@ -121,6 +160,7 @@ function init() {
   });
 
   if (restoreFromHash(window.location.hash.substring(1), typeData, mainContainer, makeColumn)) {
+    connectLiveReload();
     return;
   }
 
@@ -138,6 +178,7 @@ function init() {
       }
     }
   }
+  connectLiveReload();
 }
 
 window.addEventListener('DOMContentLoaded', init);
