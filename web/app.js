@@ -267,7 +267,7 @@ helpText.addEventListener('click', () => {
 searchDialogInput.addEventListener('input', () => {
   const value = searchDialogInput.value;
   if (value.startsWith('f:')) {
-    const { truncated } = populateFieldSearchList(value.slice(2), typeData, searchDialogList);
+    const { truncated } = populateFieldSearchList(value.slice(2).trim(), typeData, searchDialogList);
     searchDialogStatus.textContent = truncated ? `Showing top ${FIELD_SEARCH_LIMIT} results — refine your search` : '';
   } else {
     populateSearchDialogList(value, typeData, searchDialogList);
