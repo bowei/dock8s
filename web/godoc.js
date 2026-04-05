@@ -33,8 +33,11 @@ function createDocString(docString) {
 
   // TODO: expandSpan should only be added if there are more than one 
   if (visibleElementsCount(docString) > 1 || docString.elements[0].content.length > 1) {
+    // TODO: make the expand button more visually appealing and inline with 
+    // standard practices.
     const expandSpan = document.createElement('span');
-    expandSpan.textContent = ' [more]';
+    expandSpan.className = 'expand-btn';
+    // expandSpan.textContent = ' [expand]';
     summary.appendChild(expandSpan);
 
     expandSpan.addEventListener('click', () => {

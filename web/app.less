@@ -125,9 +125,6 @@ li.selected {
   color: @doc-string-color;
 }
 
-.doc-string p {
-}
-
 .doc-string a {
   color: @link-color;
 }
@@ -147,11 +144,30 @@ li.selected {
   border: 0px;
 }
 
-li.selected .field-type {
+.expand-btn {                                                                                               
+  background: none;
+  border: none;                                                                                             
+  cursor: pointer;                                        
+  padding: 2px 6px;
+  font-size: 0.85em;                                                                                        
+  color: #666;
+  border-radius: 3px;                                                                                       
+}                                                         
+
+.expand-btn:hover {                                                                                         
+  background: rgba(0, 0, 0, 0.08);
+  color: #333;                                                                                              
+}                                                         
+
+.expand-btn::before {                                                                                       
+  content: "▶";
+  display: inline-block;                                                                                    
+  transition: transform 0.2s;                             
 }
 
-li.selected .type-name {
-}
+.expand-btn.expanded::before {                                                                              
+  transform: rotate(90deg);
+}              
 
 .chevron::after {
   content: '>';
