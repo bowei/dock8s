@@ -1116,6 +1116,160 @@ func TestParseGoFiles_BadDir(t *testing.T) {
 	}
 }
 
+func TestIsPrimitive(t *testing.T) {
+	primitives := []string{
+		"bool", "string",
+		"int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uint32", "uint64", "uintptr", "byte", "rune",
+		"float32", "float64", "complex64", "complex128",
+	}
+	for _, p := range primitives {
+		if !isPrimitive(p) {
+			t.Errorf("isPrimitive(%q) = false, want true", p)
+		}
+	}
+
+	nonPrimitives := []string{"MyType", "pkg.Foo", "", "Int", "String"}
+	for _, p := range nonPrimitives {
+		if isPrimitive(p) {
+			t.Errorf("isPrimitive(%q) = true, want false", p)
+		}
+	}
+}
+
+func TestSkipPackage(t *testing.T) {
+	tests := []struct {
+		pkg  string
+		want bool
+	}{
+		// Standard library (no dot in first component)
+		{"fmt", true},
+		{"encoding/json", true},
+		{"net/http", true},
+		// Explicit skip prefixes
+		{"golang.org/x/sys", true},
+		{"k8s.io/klog/v2", true},
+		{"github.com/modern-go/reflect2", true},
+		{"github.com/json-iterator/go", true},
+		{"sigs.k8s.io/json", true},
+		{"sigs.k8s.io/json/internal/foo", true},
+		{"k8s.io/apimachinery/pkg/runtime", true},
+		{"k8s.io/apimachinery/pkg/runtime/schema", true},
+		{"k8s.io/apimachinery/pkg/third_party/forked", true},
+		{"sigs.k8s.io/randfill", true},
+		// Should NOT be skipped
+		{"k8s.io/api/core/v1", false},
+		{"k8s.io/apimachinery/pkg/apis/meta/v1", false},
+		{"github.com/myorg/myrepo", false},
+		{"sigs.k8s.io/controller-runtime", false},
+	}
+	for _, tc := range tests {
+		got := skipPackage(tc.pkg)
+		if got != tc.want {
+			t.Errorf("skipPackage(%q) = %v, want %v", tc.pkg, got, tc.want)
+		}
+	}
+}
+
+func TestResolveTypeRecursive_UnknownNode(t *testing.T) {
+	// ast.BadExpr is an AST node type not handled by resolveTypeRecursive's switch.
+	bad := &ast.BadExpr{}
+	name, decorators := resolveTypeRecursive(bad, "pkg", nil, make(map[string]bool), 0)
+	if name != "" {
+		t.Errorf("expected empty name for BadExpr, got %q", name)
+	}
+	if decorators != nil {
+		t.Errorf("expected nil decorators for BadExpr, got %v", decorators)
+	}
+}
+
+func TestResolveTypeRecursive_SelectorExpr_NoImportMap(t *testing.T) {
+	// SelectorExpr where the package name is not in the importMap.
+	src := `package p; var _ foo.Bar`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "p.go", src, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Extract the foo.Bar selector expression from the var declaration.
+	genDecl := f.Decls[0].(*ast.GenDecl)
+	valueSpec := genDecl.Specs[0].(*ast.ValueSpec)
+	sel := valueSpec.Type.(*ast.SelectorExpr)
+
+	externalPkgs := make(map[string]bool)
+	name, _ := resolveTypeRecursive(sel, "pkg", map[string]string{}, externalPkgs, 0)
+	// When the import isn't in the map, falls back to "pkgname.TypeName"
+	if name != "foo.Bar" {
+		t.Errorf("expected 'foo.Bar', got %q", name)
+	}
+	// foo should NOT be in externalPkgs since it wasn't resolved via importMap.
+	if externalPkgs["foo"] {
+		t.Error("foo should not be in externalPkgs")
+	}
+}
+
+func TestProcessStruct_FileNotFound(t *testing.T) {
+	src := `package p; type A struct{ X string }`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "p.go", src, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	typeSpec := docPkg.Types[0].Decl.Specs[0].(*ast.TypeSpec)
+	structType := typeSpec.Type.(*ast.StructType)
+	typeInfo := TypeInfo{Package: "p", TypeName: "A"}
+
+	// Pass an empty file list so findFileForTypeSpec returns nil → error path.
+	err = processStruct(&typeInfo, typeSpec, structType, nil, "p", make(map[string]bool))
+	if err == nil {
+		t.Error("processStruct should return error when file not found")
+	}
+}
+
+func TestResolvePkgDir(t *testing.T) {
+	// Test with a real standard library package — always available.
+	dir, err := resolvePkgDir("fmt")
+	if err != nil {
+		t.Fatalf("resolvePkgDir(\"fmt\") error = %v", err)
+	}
+	if dir == "" {
+		t.Error("resolvePkgDir(\"fmt\") returned empty dir")
+	}
+}
+
+func TestResolvePkgDir_Error(t *testing.T) {
+	_, err := resolvePkgDir("example.com/does/not/exist/at/all")
+	if err == nil {
+		t.Error("resolvePkgDir expected error for non-existent package")
+	}
+}
+
+func TestParsePackage_EmptyDir(t *testing.T) {
+	// A directory that has no .go files but isn't a Go package (go list fails).
+	dir, err := os.MkdirTemp("", "parsepackage_empty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	allTypes := make(map[string]TypeInfo)
+	externalPkgs, err := parsePackage(dir, allTypes)
+	// Should gracefully return nil, nil (not a Go package).
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if externalPkgs != nil {
+		t.Errorf("expected nil externalPkgs, got %v", externalPkgs)
+	}
+	if len(allTypes) != 0 {
+		t.Errorf("expected no types, got %d", len(allTypes))
+	}
+}
+
 func TestParsePackages(t *testing.T) {
 	// 1. Create temp directory structure
 	tempDir, err := os.MkdirTemp("", "test-parse-packages")

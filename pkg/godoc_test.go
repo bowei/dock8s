@@ -187,6 +187,40 @@ func TestParseGoDocString(t *testing.T) {
 				},
 			},
 		},
+		{
+			// Paragraph immediately followed by a directive (no blank line) — exercises
+			// the "+" break inside parseParagraph.
+			name:  "Paragraph then directive no blank line",
+			input: "some text\n+directive: note",
+			expected: &GoDocString{
+				Elements: []GoDocElem{
+					{Type: GoDocParagraph, Content: []string{"some text"}},
+					{Type: GoDocDirective, Content: []string{"+directive: note"}},
+				},
+			},
+		},
+		{
+			// A line that looks like a heading but is NOT bracketed by blank lines on
+			// both sides — exercises the before/after empty check in isHeading.
+			name:  "Not heading - no blank before",
+			input: "before\n# heading\n",
+			expected: &GoDocString{
+				Elements: []GoDocElem{
+					{Type: GoDocParagraph, Content: []string{"before # heading"}},
+				},
+			},
+		},
+		{
+			// "#" line bracketed by blank before but non-blank after — exercises
+			// the before/after empty check in isHeading (after is not empty → false).
+			name:  "Not heading - no blank after",
+			input: "\n# heading\nafter text",
+			expected: &GoDocString{
+				Elements: []GoDocElem{
+					{Type: GoDocParagraph, Content: []string{"# heading after text"}},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -196,5 +230,14 @@ func TestParseGoDocString(t *testing.T) {
 				t.Errorf("parseGoDocString() = %+v, want %+v", act, tc.expected)
 			}
 		})
+	}
+}
+
+func TestDocParserPeek_EOF(t *testing.T) {
+	// Call peek() with pos beyond end of lines to cover the return "" branch.
+	p := &docParser{lines: []string{"a"}, pos: 5}
+	got := p.peek()
+	if got != "" {
+		t.Errorf("peek() at EOF: got %q, want %q", got, "")
 	}
 }
