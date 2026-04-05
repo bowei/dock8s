@@ -1,3 +1,56 @@
+function createDocString(docString) {
+  const container = document.createElement('div');
+  container.className = 'doc-string';
+
+  const summary = document.createElement('div');
+  const details = document.createElement('div');
+  details.hidden = true;
+
+  container.appendChild(summary);
+  container.appendChild(details);
+
+  if (!docString) { return container; }
+
+  if (typeof docString === 'string') {
+    summary.innerHTML = getFirstSentence(docString);
+
+    // Fallback for plain text docstrings
+    const p = document.createElement('p');
+    p.textContent = docString;
+    details.appendChild(p);
+    return container;
+  }
+
+  if (!docString.elements) {
+    console.log('ERROR: empty docString.elements');
+    return container;
+  }
+
+  const stn = document.createTextNode(
+    getFirstSentence(docString.elements[0].content[0]));
+  summary.appendChild(stn);
+  linkifyTextNode(stn);
+
+  // TODO: this should ignore elements with 
+  if (docString.elements.length > 1 || docString.elements[0].content.length > 1) {
+    const selipsis = document.createElement('span');
+    selipsis.textContent = ' [more]';
+    summary.appendChild(selipsis);
+
+    selipsis.addEventListener('click', () => {
+      summary.hidden = !summary.hidden;
+      details.hidden = !details.hidden;
+      return false;
+    });
+
+
+  }
+
+  appendGoDoc(docString, details);
+
+  return container;
+}
+
 // appendGoDoc render a GoDocString into the DOM.
 //
 // @param {object} docString is a JSON with schema from pkg/godoc.go GoDocString.
@@ -62,6 +115,78 @@ function appendGoDoc(docString, out) {
   });
 }
 
-if (typeof module !== 'undefined') {
-  module.exports = { appendGoDoc };
+/**
+ * Replaces a single text node with a series of text and <a> nodes
+ * if any URLs are found in its content.
+ *
+ * @param {Node} textNode The text node to process.
+ */
+function linkifyTextNode(textNode) {
+  // 1. Ensure we're working with an actual text node
+  if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
+    console.error("The provided element is not a text node.");
+    return;
+  }
+
+  const parent = textNode.parentNode;
+  if (!parent) {
+    console.error("The text node must be attached to the DOM.");
+    return;
+  }
+
+  const text = textNode.nodeValue;
+  const urlRegex = /(https?:\/\/[^\s/$.?#].[^\s]*)/gi;
+
+  // 2. Only proceed if the regex finds at least one URL
+  if (!urlRegex.test(text)) {
+    return;
+  }
+
+  // Reset regex from the .test() call above
+  urlRegex.lastIndex = 0;
+
+  // 3. Create a document fragment to hold the new nodes
+  const fragment = document.createDocumentFragment();
+  let lastIndex = 0;
+  let match;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    // Append the text that comes before the matched URL
+    const textBefore = text.substring(lastIndex, match.index);
+    if (textBefore) {
+      fragment.appendChild(document.createTextNode(textBefore));
+    }
+
+    // Create and append the link (<a> element)
+    const url = match[0];
+    const link = document.createElement('a');
+    link.href = url;
+    link.appendChild(document.createTextNode(url));
+    fragment.appendChild(link);
+
+    lastIndex = urlRegex.lastIndex;
+  }
+
+  // 4. Append any remaining text after the last URL
+  const textAfter = text.substring(lastIndex);
+  if (textAfter) {
+    fragment.appendChild(document.createTextNode(textAfter));
+  }
+
+  // 5. Replace the original text node with the new fragment
+  parent.replaceChild(fragment, textNode);
 }
+
+function getFirstSentence(text) {
+  if (!text) { return ""; }
+  // The regex looks for the first sentence ending with a '.', '?', or '!'
+  const match = text.match(/^.+?[.?!]/);
+
+  // If a sentence is found, return it. Otherwise, return the original text.
+  return match ? match[0] : text;
+}
+
+export { 
+  createDocString, 
+  appendGoDoc,
+};

@@ -1,10 +1,6 @@
 /**
  * @jest-environment jsdom
  */
-
-// linkifyTextNode is defined in app.js; mock it for unit testing godoc.js
-global.linkifyTextNode = jest.fn();
-
 import { appendGoDoc } from './utils.js';
 
 function renderDocString(docString) {

@@ -11,6 +11,9 @@ document.body.innerHTML = `
       <ul id="search-dialog-list"></ul>
     </div>
   </div>
+  <div id="help-dialog-overlay" style="display: none;">
+    <div id="help-dialog-dialog"></div>
+  </div>
   <div id="help-text"></div>
   <select id="theme-select">
     <option value="light.css">Light</option>
@@ -22,8 +25,13 @@ document.body.innerHTML = `
 global.typeData = {};
 global.startTypes = [];
 
-// Now, require the script to be tested
-const { splitTypeName } = require('./app.js').default;
+// Use dynamic import so DOM is set up before app.js top-level code runs
+let splitTypeName;
+
+beforeAll(async () => {
+  const app = await import('./app.js');
+  splitTypeName = app.default.splitTypeName;
+});
 
 describe('splitTypeName', () => {
   it('should correctly split a fully qualified type name', () => {
