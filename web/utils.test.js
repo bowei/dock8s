@@ -10,10 +10,6 @@ function renderDocString(docString) {
 }
 
 describe('appendGoDoc', () => {
-  beforeEach(() => {
-    global.linkifyTextNode.mockClear();
-  });
-
   describe('paragraph (type "p")', () => {
     it('renders a single-line paragraph', () => {
       const out = renderDocString({
@@ -34,11 +30,13 @@ describe('appendGoDoc', () => {
       expect(p.textContent).toBe('line oneline twoline three');
     });
 
-    it('calls linkifyTextNode for each line', () => {
-      renderDocString({
-        elements: [{ type: 'p', content: ['line one\nline two'] }],
+    it('linkifies URLs in paragraph text', () => {
+      const out = renderDocString({
+        elements: [{ type: 'p', content: ['See https://example.com for details'] }],
       });
-      expect(global.linkifyTextNode).toHaveBeenCalledTimes(2);
+      const a = out.querySelector('p a');
+      expect(a).not.toBeNull();
+      expect(a.href).toBe('https://example.com/');
     });
   });
 
@@ -77,11 +75,13 @@ describe('appendGoDoc', () => {
       expect(li.textContent).toBe('line oneline two');
     });
 
-    it('calls linkifyTextNode for each line in each item', () => {
-      renderDocString({
-        elements: [{ type: 'l', content: ['a\nb', 'c'] }],
+    it('linkifies URLs in list items', () => {
+      const out = renderDocString({
+        elements: [{ type: 'l', content: ['See https://example.com', 'plain text'] }],
       });
-      expect(global.linkifyTextNode).toHaveBeenCalledTimes(3);
+      const items = out.querySelectorAll('li');
+      expect(items[0].querySelector('a')).not.toBeNull();
+      expect(items[1].querySelector('a')).toBeNull();
     });
   });
 
@@ -97,11 +97,12 @@ describe('appendGoDoc', () => {
       expect(code.textContent).toBe('x := 1\ny := 2');
     });
 
-    it('does not call linkifyTextNode for code blocks', () => {
-      renderDocString({
-        elements: [{ type: 'c', content: ['some code'] }],
+    it('does not linkify URLs in code blocks', () => {
+      const out = renderDocString({
+        elements: [{ type: 'c', content: ['https://example.com'] }],
       });
-      expect(global.linkifyTextNode).not.toHaveBeenCalled();
+      expect(out.querySelector('pre a')).toBeNull();
+      expect(out.querySelector('code').textContent).toBe('https://example.com');
     });
   });
 
