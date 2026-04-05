@@ -84,7 +84,7 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 }
 
 func skipPackage(pkgPath string) bool {
-	// As per design, ignore packages in the Go standard library. A common
+	// Ignore packages in the Go standard library. A common
 	// heuristic is that standard library packages do not have a dot in their
 	// first path component.
 	firstPart := strings.Split(pkgPath, "/")[0]
@@ -100,6 +100,7 @@ func skipPackage(pkgPath string) bool {
 		"sigs.k8s.io/json",
 		"k8s.io/apimachinery/pkg/runtime",
 		"k8s.io/apimachinery/pkg/third_party",
+		"sigs.k8s.io/randfill",
 	} {
 		if strings.HasPrefix(pkgPath, skip) {
 			return true
