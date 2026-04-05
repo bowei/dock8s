@@ -1,4 +1,6 @@
-import { createDocString } from "./godoc.js";
+import { createColumn } from './column.js';
+import { computeHash, restoreFromHash } from './hash.js';
+import { populateSearchDialogList } from './search.js';
 
 let isProgrammaticallyUpdatingHash = false;
 const mainContainer = document.getElementById('main-container');
@@ -10,138 +12,8 @@ const helpDialogOverlay = document.getElementById('help-dialog-overlay');
 const helpDialogDialog = document.getElementById('help-dialog-dialog');
 const helpText = document.getElementById('help-text');
 
-function splitTypeName(fullTypeName) {
-  const lastDot = fullTypeName.lastIndexOf('.');
-  if (lastDot === -1) {
-    return { pkg: '', type: fullTypeName };
-  }
-  const pkg = fullTypeName.substring(0, lastDot);
-  const type = fullTypeName.substring(lastDot + 1);
-  return { pkg, type };
-}
-
-function formatDecorators(decorators) {
-  if (!decorators || decorators.length === 0) {
-    return '';
-  }
-  let prefix = '';
-  decorators.forEach(dec => {
-    if (dec === 'Ptr') {
-      prefix += '*';
-    } else if (dec === 'List') {
-      prefix += '[]';
-    } else if (dec.startsWith('Map[')) {
-      const keyType = dec.substring(4, dec.length - 1);
-      prefix += 'map[' + keyType + ']';
-    }
-  });
-  return prefix;
-}
-
-function createColumn(typeName) {
-  console.log(`Creating column for type: ${typeName}`);
-  const typeInfo = typeData[typeName];
-  if (!typeInfo) return;
-
-  const column = document.createElement('div');
-  column.className = 'column';
-  column.dataset.typeName = typeName;
-
-  const header = document.createElement('div');
-  header.className = 'column-header';
-
-  const headerType = document.createElement('div');
-  headerType.innerHTML = typeInfo.typeName;
-  headerType.className = 'header-row';
-
-  const headerPkg = document.createElement('div');
-  headerPkg.innerHTML = typeInfo.package;
-  headerPkg.className = 'type-name';
-
-  header.appendChild(headerType);
-  header.appendChild(headerPkg);
-
-  column.appendChild(header);
-
-  const ul = document.createElement('ul');
-
-  if (typeInfo.fields) {
-    typeInfo.fields.forEach(field => {
-      const li = document.createElement('li');
-      li.dataset.fieldName = field.fieldName;
-      li.dataset.typeName = field.typeName;
-      li.dataset.parentType = typeName;
-
-      const { pkg, type } = splitTypeName(field.typeName);
-      const decorators = formatDecorators(field.typeDecorators);
-
-      const line1 = document.createElement('div');
-      line1.className = "field-row";
-
-      const fieldName = document.createElement('span');
-      fieldName.innerHTML = field.fieldName;
-      fieldName.className = 'field-name';
-
-      const fieldType = document.createElement('span');
-      fieldType.innerHTML = decorators + type;
-      fieldType.className = 'field-type';
-
-      line1.appendChild(fieldName);
-      line1.appendChild(fieldType);
-
-      const line2 = document.createElement('div');
-      line2.className = 'type-name';
-      line2.innerHTML = pkg;
-
-      const contentWrapper = document.createElement('div');
-      contentWrapper.appendChild(line1);
-      contentWrapper.appendChild(line2);
-      if (field.docString) {
-        contentWrapper.appendChild(createDocString(field.parsedDocString));
-      }
-
-      li.appendChild(contentWrapper);
-
-      if (typeData[field.typeName]) {
-        const chevron = document.createElement('span');
-        chevron.className = 'chevron';
-        li.appendChild(chevron);
-      }
-
-      li.addEventListener('click', (event) => {
-        handleFieldClick(event.currentTarget);
-      });
-      ul.appendChild(li);
-    });
-  }
-
-  if (typeInfo.enumValues) {
-    typeInfo.enumValues.forEach(enumVal => {
-      const li = document.createElement('li');
-      li.style.cursor = 'default';
-
-      const line1 = document.createElement('div');
-      line1.className = "field-row";
-
-      const enumName = document.createElement('span');
-      enumName.innerHTML = enumVal.name;
-      enumName.className = 'field-name';
-
-      line1.appendChild(enumName);
-
-      const contentWrapper = document.createElement('div');
-      contentWrapper.appendChild(line1);
-      if (enumVal.docString) {
-        contentWrapper.appendChild(createDocString(enumVal.parsedDocString));
-      }
-
-      li.appendChild(contentWrapper);
-      ul.appendChild(li);
-    });
-  }
-
-  column.appendChild(ul);
-  return column;
+function makeColumn(typeName) {
+  return createColumn(typeName, typeData, handleFieldClick);
 }
 
 function handleFieldClick(listItem) {
@@ -162,7 +34,7 @@ function handleFieldClick(listItem) {
   listItem.classList.add('selected');
 
   if (typeData[typeName]) {
-    const newColumn = createColumn(typeName);
+    const newColumn = makeColumn(typeName);
     if (newColumn) {
       mainContainer.appendChild(newColumn);
       newColumn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
@@ -171,60 +43,18 @@ function handleFieldClick(listItem) {
   updateHash();
 }
 
-function populateSearchDialogList(filter = '') {
-  searchDialogList.innerHTML = '';
-
-  const typeArray = Object.entries(typeData);
-  const typeNames = typeArray.map(x => { return x[0] });
-
-  const filteredTypes = typeNames.filter(name => {
-    const typeInfo = typeData[name];
-    if (!typeInfo.isRoot) {
-      return false;
-    }
-    return name.toLowerCase().includes(filter.toLowerCase());
-  });
-
-  // Sort on the short name.
-  filteredTypes.sort((a, b) => {
-    const as = a.split(".");
-    const bs = b.split(".");
-    const shortA = as[as.length - 1];
-    const shortB = bs[bs.length - 1];
-    const ret = shortA.localeCompare(shortB);
-
-    if (ret != 0) { return ret; }
-    return a.localeCompare(b);
-  });
-
-  filteredTypes.forEach(typeName => {
-    const typeInfo = typeData[typeName];
-
-    const li = document.createElement('li');
-
-    const tn = document.createElement('div');
-    tn.innerHTML = typeInfo.typeName;
-    tn.className = 'search-dialog-type-name';
-
-    const pkg = document.createElement('div');
-    pkg.innerHTML = typeInfo.package;
-    pkg.className = 'search-dialog-type-pkg';
-
-    li.appendChild(tn);
-    li.appendChild(pkg);
-    li.dataset.typeName = typeName;
-
-    searchDialogList.appendChild(li);
-  });
-
-  if (searchDialogList.firstChild) {
-    searchDialogList.firstChild.classList.add('selected');
+function updateHash() {
+  const newHash = computeHash(mainContainer);
+  if (window.location.hash !== newHash) {
+    isProgrammaticallyUpdatingHash = true;
+    window.location.hash = newHash;
+    setTimeout(() => { isProgrammaticallyUpdatingHash = false; }, 0);
   }
 }
 
 function showSearchDialog() {
   console.log('Showing search dialog');
-  populateSearchDialogList();
+  populateSearchDialogList('', typeData, searchDialogList);
   searchDialogOverlay.style.display = 'flex';
   searchDialogInput.focus();
 }
@@ -243,125 +73,6 @@ function showHelpDialog() {
 function hideHelpDialog() {
   console.log('Hiding help dialog');
   helpDialogOverlay.style.display = 'none';
-}
-
-// ----
-
-function updateHash() {
-  const columns = mainContainer.querySelectorAll('.column');
-  if (columns.length === 0) {
-    isProgrammaticallyUpdatingHash = true;
-    window.location.hash = '';
-    setTimeout(() => { isProgrammaticallyUpdatingHash = false; }, 0);
-    return;
-  }
-
-  const rootType = columns[0].dataset.typeName;
-  const path = [rootType];
-
-  const selectedFields = mainContainer.querySelectorAll('li.selected');
-  selectedFields.forEach(item => {
-    path.push(item.dataset.fieldName);
-  });
-
-  const newHash = '#' + path.join('/');
-  console.log(`Updating hash to: ${newHash}`);
-  if (window.location.hash !== newHash) {
-    isProgrammaticallyUpdatingHash = true;
-    window.location.hash = newHash;
-    setTimeout(() => { isProgrammaticallyUpdatingHash = false; }, 0);
-  }
-}
-
-// hashToParts returns [rootTypeName, [field1, field2, ...].
-function hashToParts(hash) {
-  if (!hash) {
-    return [null, []];
-  }
-
-  const path = decodeURIComponent(hash);
-  if (!path) {
-    console.log(`ERROR: decodeURIComponent ${hash}`);
-    return [null, []];
-  }
-  const parts = path.split('/');
-  console.log(`parts = ${parts}`);
-
-  let lastDotIndex = -1;
-  for (let i = 0; i < parts.length; i++) {
-    if (parts[i].includes('.')) {
-      lastDotIndex = i;
-    }
-  }
-
-  if (lastDotIndex === -1) {
-    // This can happen if the type name has no package, e.g., a built-in,
-    // or if the hash is just a single type name without a package.
-    // In this case, assume the first part is the type name.
-    const rootTypeName = parts[0];
-    const fieldParts = parts.slice(1);
-    return [rootTypeName, fieldParts];
-  }
-
-  const rootTypeName = parts.slice(0, lastDotIndex + 1).join('/');
-  const fieldParts = parts.slice(lastDotIndex + 1);
-
-  return [rootTypeName, fieldParts];
-}
-
-function restoreFromHash() {
-  const hash = window.location.hash.substring(1);
-  console.log(`Restoring from hash: ${hash}`);
-  if (!hash) {
-    return false;
-  }
-
-  const [rootTypeName, parts] = hashToParts(hash)
-  console.log(`hashToParts = ${rootTypeName}, ${parts}`);
-
-  if (!typeData[rootTypeName]) {
-    console.log(`ERROR: ${rootTypeName} not found`);
-    return false;
-  }
-
-  mainContainer.innerHTML = '';
-  let currentTypeName = rootTypeName;
-  let currentColumn = createColumn(currentTypeName);
-  if (!currentColumn) {
-    console.log(`ERROR: could not create column for ${rootTypeName}`);
-    return false;
-  }
-
-  mainContainer.appendChild(currentColumn);
-
-  for (const fieldName of parts) {
-    const fieldItem = Array.from(currentColumn.querySelectorAll('li')).find(li => li.dataset.fieldName === fieldName);
-
-    if (fieldItem) {
-      fieldItem.classList.add('selected');
-      const nextTypeName = fieldItem.dataset.typeName;
-      if (typeData[nextTypeName]) {
-        currentTypeName = nextTypeName;
-        currentColumn = createColumn(currentTypeName);
-        if (currentColumn) {
-          mainContainer.appendChild(currentColumn);
-        } else {
-          break;
-        }
-      } else {
-        break;
-      }
-    } else {
-      break;
-    }
-  }
-
-  const lastColumn = mainContainer.querySelector('.column:last-child');
-  if (lastColumn) {
-    lastColumn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-  }
-
-  return true;
 }
 
 function selectType(typeName) {
@@ -398,20 +109,22 @@ function init() {
       return;
     }
     console.log('hashchange event');
-    restoreFromHash();
+    restoreFromHash(window.location.hash.substring(1), typeData, mainContainer, makeColumn);
   });
 
-  if (restoreFromHash()) { return; }
+  if (restoreFromHash(window.location.hash.substring(1), typeData, mainContainer, makeColumn)) {
+    return;
+  }
 
   if (startTypes) {
-    const initialColumn = createColumn(startTypes);
+    const initialColumn = makeColumn(startTypes);
     if (initialColumn) {
       mainContainer.appendChild(initialColumn);
     }
   } else {
     const firstTypeName = Object.keys(typeData)[0];
     if (firstTypeName) {
-      const initialColumn = createColumn(firstTypeName);
+      const initialColumn = makeColumn(firstTypeName);
       if (initialColumn) {
         mainContainer.appendChild(initialColumn);
       }
@@ -423,24 +136,24 @@ window.addEventListener('DOMContentLoaded', init);
 
 function handleKeyDown(event) {
   if (event.key === '/' && event.target.tagName !== 'INPUT') {
-    console.log('‘/’ key pressed');
+    console.log("'/' key pressed");
     event.preventDefault();
     showSearchDialog();
     return;
   }
   if (event.key === '?' && event.target.tagName !== 'INPUT') {
-    console.log('‘?’ key pressed');
+    console.log("'?' key pressed");
     event.preventDefault();
     showHelpDialog();
     return;
   }
   if (event.key === 'Escape') {
     if (searchDialogOverlay.style.display === 'flex') {
-      console.log('‘esc’ key pressed');
+      console.log("'esc' key pressed");
       hideSearchDialog();
     }
     if (helpDialogOverlay.style.display === 'flex') {
-      console.log('‘esc’ key pressed');
+      console.log("'esc' key pressed");
       hideHelpDialog();
     }
     return;
@@ -516,8 +229,8 @@ function handleKeyDown(event) {
         updateHash();
         const newSelectedItems = mainContainer.querySelectorAll('li.selected');
         if (newSelectedItems.length > 0) {
-            const newActiveSelection = newSelectedItems[newSelectedItems.length - 1];
-            newActiveSelection.scrollIntoView({ block: 'nearest' });
+          const newActiveSelection = newSelectedItems[newSelectedItems.length - 1];
+          newActiveSelection.scrollIntoView({ block: 'nearest' });
         }
       }
       break;
@@ -544,7 +257,7 @@ helpText.addEventListener('click', () => {
 });
 
 searchDialogInput.addEventListener('input', () => {
-  populateSearchDialogList(searchDialogInput.value);
+  populateSearchDialogList(searchDialogInput.value, typeData, searchDialogList);
 });
 
 searchDialogInput.addEventListener('keydown', (event) => {
@@ -595,7 +308,3 @@ helpDialogDialog.addEventListener('click', (event) => {
 helpDialogOverlay.addEventListener('click', () => {
   hideHelpDialog();
 });
-
-export default {
-  splitTypeName,
-};

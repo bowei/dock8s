@@ -25,30 +25,16 @@ document.body.innerHTML = `
 global.typeData = {};
 global.startTypes = [];
 
-// Use dynamic import so DOM is set up before app.js top-level code runs
-let splitTypeName;
-
 beforeAll(async () => {
-  const app = await import('./app.js');
-  splitTypeName = app.default.splitTypeName;
+  await import('./app.js');
 });
 
-describe('splitTypeName', () => {
-  it('should correctly split a fully qualified type name', () => {
-    const { pkg, type } = splitTypeName('k8s.io/api/core/v1.Pod');
-    expect(pkg).toBe('k8s.io/api/core/v1');
-    expect(type).toBe('Pod');
-  });
-
-  it('should handle type names without a package', () => {
-    const { pkg, type } = splitTypeName('string');
-    expect(pkg).toBe('');
-    expect(type).toBe('string');
-  });
-
-  it('should handle empty strings', () => {
-    const { pkg, type } = splitTypeName('');
-    expect(pkg).toBe('');
-    expect(type).toBe('');
+// app.js is now just orchestration; unit tests live in utils.test.js,
+// column.test.js, hash.test.js, and search.test.js.
+// This file verifies that app.js loads without errors given valid DOM and globals.
+describe('app', () => {
+  it('loads without throwing', () => {
+    // If the import above succeeded, app.js initialized cleanly.
+    expect(true).toBe(true);
   });
 });
