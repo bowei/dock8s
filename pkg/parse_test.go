@@ -34,12 +34,10 @@ const (
 		t.Fatalf("failed to parse source: %v", err)
 	}
 
-	pkg := &ast.Package{
-		Name:  "test",
-		Files: map[string]*ast.File{"test.go": f},
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "test")
+	if err != nil {
+		t.Fatalf("failed to create doc package: %v", err)
 	}
-
-	docPkg := doc.New(pkg, "test", 0)
 
 	// Find the Status type
 	var statusType *doc.Type
@@ -119,12 +117,10 @@ var (
 		t.Fatalf("failed to parse source: %v", err)
 	}
 
-	pkg := &ast.Package{
-		Name:  "test",
-		Files: map[string]*ast.File{"test.go": f},
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "test")
+	if err != nil {
+		t.Fatalf("failed to create doc package: %v", err)
 	}
-
-	docPkg := doc.New(pkg, "test", 0)
 
 	// Find the Status type
 	var statusType *doc.Type
@@ -207,12 +203,10 @@ var (
 		t.Fatalf("failed to parse source: %v", err)
 	}
 
-	pkg := &ast.Package{
-		Name:  "test",
-		Files: map[string]*ast.File{"test.go": f},
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "test")
+	if err != nil {
+		t.Fatalf("failed to create doc package: %v", err)
 	}
-
-	docPkg := doc.New(pkg, "test", 0)
 
 	// Find the Status type
 	var statusType *doc.Type
@@ -283,12 +277,10 @@ type MyStruct struct {
 		t.Fatalf("failed to parse source: %v", err)
 	}
 
-	pkg := &ast.Package{
-		Name:  "test",
-		Files: map[string]*ast.File{"test.go": f},
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "test")
+	if err != nil {
+		t.Fatalf("failed to create doc package: %v", err)
 	}
-
-	docPkg := doc.New(pkg, "test", 0)
 
 	// Find the MyStruct type
 	var structType *doc.Type
@@ -323,12 +315,10 @@ type EmptyStatus string
 		t.Fatalf("failed to parse source: %v", err)
 	}
 
-	pkg2 := &ast.Package{
-		Name:  "test",
-		Files: map[string]*ast.File{"test2.go": f2},
+	docPkg2, err := doc.NewFromFiles(fset, []*ast.File{f2}, "test")
+	if err != nil {
+		t.Fatalf("failed to create doc package: %v", err)
 	}
-
-	docPkg2 := doc.New(pkg2, "test", 0)
 
 	var emptyType *doc.Type
 	for _, t := range docPkg2.Types {
@@ -392,12 +382,10 @@ const (
 		t.Fatalf("failed to parse source: %v", err)
 	}
 
-	pkg := &ast.Package{
-		Name:  "testpkg",
-		Files: map[string]*ast.File{"test.go": f},
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "testpkg")
+	if err != nil {
+		t.Fatalf("failed to create doc package: %v", err)
 	}
-
-	docPkg := doc.New(pkg, "testpkg", 0)
 
 	got := findConstantsByType(docPkg, "MyType")
 
@@ -477,12 +465,11 @@ type K8sResource struct {
 		t.Fatalf("failed to parse source: %v", err)
 	}
 
-	pkg := &ast.Package{
-		Name:  "test",
-		Files: map[string]*ast.File{"test.go": f},
+	files := []*ast.File{f}
+	docPkg, err := doc.NewFromFiles(fset, files, "test")
+	if err != nil {
+		t.Fatalf("failed to create doc package: %v", err)
 	}
-
-	docPkg := doc.New(pkg, "test", 0)
 
 	// --- Test MyStruct ---
 	var myStructType *doc.Type
@@ -505,7 +492,7 @@ type K8sResource struct {
 		TypeName: "MyStruct",
 	}
 
-	err = processStruct(&typeInfo, typeSpec, structType, pkg, "test", externalPkgs)
+	err = processStruct(&typeInfo, typeSpec, structType, files, "test", externalPkgs)
 	if err != nil {
 		t.Fatalf("processStruct failed: %v", err)
 	}
@@ -629,7 +616,7 @@ type K8sResource struct {
 		TypeName: "K8sResource",
 	}
 
-	err = processStruct(&typeInfo, typeSpec, structType, pkg, "test", externalPkgs)
+	err = processStruct(&typeInfo, typeSpec, structType, files, "test", externalPkgs)
 	if err != nil {
 		t.Fatalf("processStruct for K8sResource failed: %v", err)
 	}
@@ -778,19 +765,18 @@ type SimpleAlias int
 		t.Fatalf("failed to parse source: %v", err)
 	}
 
-	pkg := &ast.Package{
-		Name:  "test",
-		Files: map[string]*ast.File{"test.go": f},
+	files := []*ast.File{f}
+	docPkg, err := doc.NewFromFiles(fset, files, "test")
+	if err != nil {
+		t.Fatalf("failed to create doc package: %v", err)
 	}
-
-	docPkg := doc.New(pkg, "test", 0)
 
 	allTypes := make(map[string]TypeInfo)
 	externalPkgs := make(map[string]bool)
 	pkgImportPath := "example.com/test"
 
 	for _, typ := range docPkg.Types {
-		processType(typ, pkgImportPath, allTypes, pkg, externalPkgs, docPkg)
+		processType(typ, pkgImportPath, allTypes, files, externalPkgs, docPkg)
 	}
 
 	// 1. Check that struct and enum were processed
@@ -841,7 +827,7 @@ type SimpleAlias int
 	modifiedTypeInfo.DocString = "modified"
 	allTypes["example.com/test.MyStruct"] = modifiedTypeInfo
 
-	processType(myStructType, pkgImportPath, allTypes, pkg, externalPkgs, docPkg)
+	processType(myStructType, pkgImportPath, allTypes, files, externalPkgs, docPkg)
 
 	if allTypes["example.com/test.MyStruct"].DocString != "modified" {
 		t.Error("processType should have skipped reprocessing an existing type")

@@ -220,14 +220,14 @@ func processStruct(
 	typeInfo *TypeInfo,
 	typeSpec *ast.TypeSpec,
 	structType *ast.StructType,
-	pkg *ast.Package,
+	files []*ast.File,
 	pkgImportPath string,
 	externalPkgs map[string]bool,
 ) error {
 	log.Printf("processing struct %s", typeInfo.TypeName)
 	// Find the file that contains this type spec
 	var file *ast.File
-	for _, f := range pkg.Files {
+	for _, f := range files {
 		if f.Pos() <= typeSpec.Pos() && typeSpec.Pos() < f.End() {
 			file = f
 			break
@@ -464,34 +464,45 @@ func parsePackage(pkgDir string, allTypes map[string]TypeInfo) (map[string]bool,
 	log.Printf("parsing package: %s", pkgImportPath)
 
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, pkgDir, func(fi os.FileInfo) bool {
-		return !strings.HasSuffix(fi.Name(), "_test.go")
-	}, parser.ParseComments)
+	entries, err := os.ReadDir(pkgDir)
 	if err != nil {
 		return nil, err
 	}
 
 	externalPkgs := make(map[string]bool)
 
-	for _, pkg := range pkgs {
-		if strings.HasSuffix(pkg.Name, "_test") {
-			log.Printf("skipping test package: %s", pkg.Name)
+	var files []*ast.File
+	for _, entry := range entries {
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		log.Printf("processing package AST: %s", pkg.Name)
-		docPkg := doc.New(pkg, pkgImportPath, 0)
-
-		// Collect all imports from all files in the package
-		for _, file := range pkg.Files {
-			for _, i := range file.Imports {
-				path := strings.Trim(i.Path.Value, `"`)
-				externalPkgs[path] = true
-			}
+		f, err := parser.ParseFile(fset, filepath.Join(pkgDir, name), nil, parser.ParseComments)
+		if err != nil {
+			return nil, err
 		}
+		files = append(files, f)
+	}
 
-		for _, t := range docPkg.Types {
-			processType(t, pkgImportPath, allTypes, pkg, externalPkgs, docPkg)
+	if len(files) == 0 {
+		return externalPkgs, nil
+	}
+
+	log.Printf("processing package AST: %s", files[0].Name.Name)
+	docPkg, err := doc.NewFromFiles(fset, files, pkgImportPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		for _, i := range file.Imports {
+			path := strings.Trim(i.Path.Value, `"`)
+			externalPkgs[path] = true
 		}
+	}
+
+	for _, t := range docPkg.Types {
+		processType(t, pkgImportPath, allTypes, files, externalPkgs, docPkg)
 	}
 
 	return externalPkgs, nil
@@ -501,7 +512,7 @@ func processType(
 	t *doc.Type,
 	pkgImportPath string,
 	allTypes map[string]TypeInfo,
-	pkg *ast.Package,
+	files []*ast.File,
 	externalPkgs map[string]bool,
 	docPkg *doc.Package,
 ) {
@@ -537,7 +548,7 @@ func processType(
 	switch spec := typeSpec.Type.(type) {
 	case *ast.StructType:
 		log.Printf("type %s is a struct", qualifiedTypeName)
-		if err := processStruct(&typeInfo, typeSpec, spec, pkg, pkgImportPath, externalPkgs); err != nil {
+		if err := processStruct(&typeInfo, typeSpec, spec, files, pkgImportPath, externalPkgs); err != nil {
 			log.Printf("Error processing struct %s: %v", qualifiedTypeName, err)
 			return
 		}
