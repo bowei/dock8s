@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { populateSearchDialogList, buildReachableTypes, populateFieldSearchList } from './search.js';
+import { populateSearchDialogList, buildReachableTypes, findFieldPaths, populateFieldSearchList } from './search.js';
 
 const typeData = {
   'example.io/v1.Pod': { typeName: 'Pod', package: 'example.io/v1', isRoot: true },
@@ -151,6 +151,109 @@ describe('buildReachableTypes', () => {
   });
 });
 
+describe('findFieldPaths', () => {
+  it('finds direct fields on root types', () => {
+    const results = findFieldPaths('spec', fieldTypeData);
+    const paths = results.map(r => r.path);
+    expect(paths).toContainEqual(['spec']);
+  });
+
+  it('finds fields nested under root types', () => {
+    const results = findFieldPaths('phase', fieldTypeData);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].path).toEqual(['status', 'phase']);
+    expect(results[0].rootTypeName).toBe('example.io/v1.Pod');
+  });
+
+  it('excludes paths originating from non-root (orphan) types', () => {
+    // 'spec' appears on Pod (root) and Orphan (non-root, unreachable)
+    const results = findFieldPaths('spec', fieldTypeData);
+    const rootNames = results.map(r => r.rootTypeName);
+    expect(rootNames).not.toContain('example.io/v1.Orphan');
+  });
+
+  it('filters case-insensitively', () => {
+    const lower = findFieldPaths('phase', fieldTypeData);
+    const upper = findFieldPaths('PHASE', fieldTypeData);
+    expect(upper.length).toBe(lower.length);
+  });
+
+  it('returns empty array when no fields match', () => {
+    const results = findFieldPaths('zzznomatch', fieldTypeData);
+    expect(results).toEqual([]);
+  });
+
+  it('does not follow cycles', () => {
+    const cyclicData = {
+      'example.io/v1.Root': {
+        typeName: 'Root', package: 'example.io/v1', isRoot: true,
+        fields: [{ fieldName: 'self', typeName: 'example.io/v1.Root' }],
+      },
+    };
+    // Should not infinite-loop; 'self' matches once as a direct field.
+    const results = findFieldPaths('self', cyclicData);
+    expect(results.length).toBe(1);
+    expect(results[0].path).toEqual(['self']);
+  });
+
+  it('stops collecting after FIELD_SEARCH_LIMIT results', () => {
+    const bigData = {
+      'example.io/v1.Root': {
+        typeName: 'Root', package: 'example.io/v1', isRoot: true,
+        fields: Array.from({ length: 51 }, (_, i) => ({ fieldName: `field${i}`, typeName: 'string' })),
+      },
+    };
+    const results = findFieldPaths('field', bigData);
+    expect(results.length).toBe(50);
+  });
+
+  it('respects MAX_FIELD_SEARCH_DEPTH by not descending beyond 10 levels', () => {
+    // Build a chain of 12 types: Root -> T1 -> T2 -> ... -> T11, each with a 'deep' field.
+    const deepData = { 'example.io/v1.Root': { typeName: 'Root', package: 'example.io/v1', isRoot: true, fields: [] } };
+    let prev = 'example.io/v1.Root';
+    for (let i = 1; i <= 11; i++) {
+      const name = `example.io/v1.T${i}`;
+      deepData[prev].fields.push({ fieldName: `f${i}`, typeName: name });
+      deepData[name] = { typeName: `T${i}`, package: 'example.io/v1', isRoot: false, fields: [] };
+      prev = name;
+    }
+    // Add a matching field at level 11 (deeper than MAX_FIELD_SEARCH_DEPTH=10).
+    deepData[prev].fields.push({ fieldName: 'deepField', typeName: 'string' });
+
+    const results = findFieldPaths('deepField', deepData);
+    // Path would be [f1,f2,...,f11,deepField] = length 12, which exceeds depth 10.
+    expect(results.length).toBe(0);
+  });
+
+  it('same root appears multiple times for different paths to matching field', () => {
+    // Pod has two paths to a field named 'name': via spec/containers/name and via containers/name
+    const multiPathData = {
+      'example.io/v1.Pod': {
+        typeName: 'Pod', package: 'example.io/v1', isRoot: true,
+        fields: [
+          { fieldName: 'spec', typeName: 'example.io/v1.PodSpec' },
+          { fieldName: 'containers', typeName: 'example.io/v1.Container' },
+        ],
+      },
+      'example.io/v1.PodSpec': {
+        typeName: 'PodSpec', package: 'example.io/v1', isRoot: false,
+        fields: [{ fieldName: 'containers', typeName: 'example.io/v1.Container' }],
+      },
+      'example.io/v1.Container': {
+        typeName: 'Container', package: 'example.io/v1', isRoot: false,
+        fields: [{ fieldName: 'name', typeName: 'string' }],
+      },
+    };
+    const results = findFieldPaths('name', multiPathData);
+    expect(results.length).toBe(2);
+    const rootNames = results.map(r => r.rootTypeName);
+    expect(rootNames.every(n => n === 'example.io/v1.Pod')).toBe(true);
+    const paths = results.map(r => r.path.join('/'));
+    expect(paths).toContain('spec/containers/name');
+    expect(paths).toContain('containers/name');
+  });
+});
+
 describe('populateFieldSearchList', () => {
   it('returns empty list for empty filter', () => {
     const list = makeList();
@@ -162,39 +265,51 @@ describe('populateFieldSearchList', () => {
     const list = makeList();
     populateFieldSearchList('NAME', fieldTypeData, list);
     const items = Array.from(list.querySelectorAll('li:not(.search-results-truncated)'));
-    const fieldNames = items.map(li => li.dataset.fieldName);
+    const fieldNames = items.map(li => li.querySelector('.search-dialog-type-name').textContent);
     expect(fieldNames).toContain('name');
     expect(fieldNames).toContain('nodeName');
   });
 
-  it('excludes fields on unreachable types', () => {
+  it('excludes paths from unreachable (orphan) types', () => {
+    // 'spec' exists on Pod (reachable root) and Orphan (unreachable non-root)
     const list = makeList();
-    // 'spec' exists on both Pod (reachable) and Orphan (unreachable)
     populateFieldSearchList('spec', fieldTypeData, list);
     const items = Array.from(list.querySelectorAll('li:not(.search-results-truncated)'));
-    const parents = items.map(li => li.dataset.parentTypeName);
-    expect(parents).toContain('example.io/v1.Pod');
-    expect(parents).not.toContain('example.io/v1.Orphan');
+    const roots = items.map(li => li.dataset.rootTypeName);
+    expect(roots).toContain('example.io/v1.Pod');
+    expect(roots).not.toContain('example.io/v1.Orphan');
   });
 
-  it('sets dataset.searchMode, dataset.parentTypeName, dataset.fieldName', () => {
+  it('sets dataset.searchMode, dataset.rootTypeName, dataset.fieldPath', () => {
     const list = makeList();
     populateFieldSearchList('phase', fieldTypeData, list);
     const item = list.querySelector('li:not(.search-results-truncated)');
     expect(item.dataset.searchMode).toBe('field');
-    expect(item.dataset.parentTypeName).toBe('example.io/v1.PodStatus');
-    expect(item.dataset.fieldName).toBe('phase');
+    expect(item.dataset.rootTypeName).toBe('example.io/v1.Pod');
+    expect(item.dataset.fieldPath).toBe('status/phase');
   });
 
-  it('sorts by field name then parent type name', () => {
+  it('breadcrumb shows root short name and path to containing type', () => {
+    const list = makeList();
+    populateFieldSearchList('phase', fieldTypeData, list);
+    const item = list.querySelector('li:not(.search-results-truncated)');
+    expect(item.querySelector('.search-dialog-type-pkg').textContent).toBe('Pod / status');
+  });
+
+  it('breadcrumb for direct root field shows only root short name', () => {
+    const list = makeList();
+    populateFieldSearchList('spec', fieldTypeData, list);
+    const item = list.querySelector('li:not(.search-results-truncated)');
+    expect(item.querySelector('.search-dialog-type-pkg').textContent).toBe('Pod');
+  });
+
+  it('sorts by field name then root type then path depth', () => {
     const list = makeList();
     populateFieldSearchList('e', fieldTypeData, list);
     const items = Array.from(list.querySelectorAll('li:not(.search-results-truncated)'));
-    const fieldNames = items.map(li => li.dataset.fieldName);
-    // Should be sorted: containers, image, name, nodeName, phase, spec, status
+    const fieldNames = items.map(li => li.querySelector('.search-dialog-type-name').textContent);
     for (let i = 1; i < fieldNames.length; i++) {
-      const cmp = fieldNames[i - 1].localeCompare(fieldNames[i]);
-      expect(cmp).toBeLessThanOrEqual(0);
+      expect(fieldNames[i - 1].localeCompare(fieldNames[i])).toBeLessThanOrEqual(0);
     }
   });
 
@@ -205,8 +320,7 @@ describe('populateFieldSearchList', () => {
     expect(first.classList.contains('selected')).toBe(true);
   });
 
-  it('shows truncation indicator when results exceed limit', () => {
-    // Build typeData with 51 fields all matching 'field'
+  it('shows truncation indicator when results hit the limit', () => {
     const bigData = {
       'example.io/v1.Root': {
         typeName: 'Root', package: 'example.io/v1', isRoot: true,
@@ -219,7 +333,7 @@ describe('populateFieldSearchList', () => {
     const truncItems = list.querySelectorAll('li.search-results-truncated');
     expect(realItems.length).toBe(50);
     expect(truncItems.length).toBe(1);
-    expect(truncItems[0].textContent).toMatch(/50 of 51/);
+    expect(truncItems[0].textContent).toMatch(/50\+/);
   });
 
   it('does not show truncation indicator when results are within limit', () => {
@@ -231,8 +345,7 @@ describe('populateFieldSearchList', () => {
   it('clears previous results on each call', () => {
     const list = makeList();
     populateFieldSearchList('name', fieldTypeData, list);
-    const first = list.querySelectorAll('li:not(.search-results-truncated)').length;
-    expect(first).toBeGreaterThan(0);
+    expect(list.querySelectorAll('li:not(.search-results-truncated)').length).toBeGreaterThan(0);
     populateFieldSearchList('phase', fieldTypeData, list);
     expect(list.querySelectorAll('li:not(.search-results-truncated)').length).toBe(1);
   });

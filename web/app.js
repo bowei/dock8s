@@ -79,8 +79,8 @@ function selectItem(li) {
   if (li.classList.contains('search-results-truncated')) return;
   hideSearchDialog();
   if (li.dataset.searchMode === 'field') {
-    console.log(`Field selected: ${li.dataset.parentTypeName}.${li.dataset.fieldName}`);
-    window.location.hash = '#' + li.dataset.parentTypeName + '/' + li.dataset.fieldName;
+    console.log(`Field selected: ${li.dataset.rootTypeName}/${li.dataset.fieldPath}`);
+    window.location.hash = '#' + li.dataset.rootTypeName + '/' + li.dataset.fieldPath;
   } else {
     console.log(`Type selected: ${li.dataset.typeName}`);
     window.location.hash = '#' + li.dataset.typeName;
