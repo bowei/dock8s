@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 
+	dock8s "github.com/bowei/dock8s"
 	"github.com/bowei/dock8s/pkg"
 )
 
@@ -14,13 +16,45 @@ func main() {
 	outputFile := flag.String("output", "-", "output file. '-' will write to stdout")
 	jsonOutput := flag.Bool("json", false, "output JSON instead of HTML")
 	startType := flag.String("type", "k8s.io/api/core/v1.Pod", "initial type to display")
+	serveDir := flag.String("serve", "", "serve API docs from this directory on localhost:8080, watching for changes")
+	generateDir := flag.String("generate", "", "generate API docs website to this directory (source directory is a positional arg)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Generate Go API documentation.\n\n")
 		fmt.Fprintf(os.Stderr, "Usage: %s [flags] <package-directories...>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "       %s -serve <source-dir>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "       %s -generate <dest-dir> <source-dir>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	webFS, err := fs.Sub(dock8s.WebFS, "web")
+	if err != nil {
+		log.Fatalf("Error loading web assets: %v", err)
+	}
+
+	if *serveDir != "" {
+		runServe(*serveDir, webFS)
+		return
+	}
+
+	if *generateDir != "" {
+		args := flag.Args()
+		if len(args) == 0 {
+			fmt.Fprintf(os.Stderr, "-generate requires a source directory as a positional argument\n")
+			flag.Usage()
+			os.Exit(1)
+		}
+		allTypes, err := pkg.ParsePackages(args)
+		if err != nil {
+			log.Fatalf("Error parsing packages: %v", err)
+		}
+		if err := pkg.WriteWebsite(allTypes, *generateDir, webFS); err != nil {
+			log.Fatalf("Error generating website: %v", err)
+		}
+		log.Printf("Website written to %s", *generateDir)
+		return
+	}
 
 	args := flag.Args()
 	if len(args) == 0 {
