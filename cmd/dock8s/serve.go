@@ -13,17 +13,21 @@ import (
 	"github.com/bowei/dock8s/pkg"
 )
 
-func runServe(srcDir string, webFS fs.FS) {
+func runServe(srcDirs []string, webFS fs.FS) {
 	var mu sync.RWMutex
 	var dataJS []byte
 
 	reparse := func() {
-		abs, err := filepath.Abs(srcDir)
-		if err != nil {
-			log.Printf("Error resolving path %q: %v", srcDir, err)
-			return
+		absDirs := make([]string, 0, len(srcDirs))
+		for _, srcDir := range srcDirs {
+			abs, err := filepath.Abs(srcDir)
+			if err != nil {
+				log.Printf("Error resolving path %q: %v", srcDir, err)
+				return
+			}
+			absDirs = append(absDirs, abs)
 		}
-		types, err := pkg.ParsePackages([]string{abs})
+		types, err := pkg.ParsePackages(absDirs)
 		if err != nil {
 			log.Printf("Error parsing packages: %v", err)
 			return
@@ -42,13 +46,13 @@ func runServe(srcDir string, webFS fs.FS) {
 	reparse()
 
 	go func() {
-		lastMtime := latestGoMtime(srcDir)
+		lastMtime := latestGoMtimeAll(srcDirs)
 		for {
 			time.Sleep(2 * time.Second)
-			t := latestGoMtime(srcDir)
+			t := latestGoMtimeAll(srcDirs)
 			if t.After(lastMtime) {
 				lastMtime = t
-				log.Printf("Changes detected in %s, regenerating...", srcDir)
+				log.Printf("Changes detected, regenerating...")
 				reparse()
 			}
 		}
@@ -71,21 +75,23 @@ func runServe(srcDir string, webFS fs.FS) {
 	}
 }
 
-// latestGoMtime returns the most recent modification time among .go files in dir.
-func latestGoMtime(dir string) time.Time {
+// latestGoMtimeAll returns the most recent modification time among .go files across all dirs.
+func latestGoMtimeAll(dirs []string) time.Time {
 	var latest time.Time
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
+	for _, dir := range dirs {
+		filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
+				return nil
+			}
+			info, err := d.Info()
+			if err != nil {
+				return nil
+			}
+			if info.ModTime().After(latest) {
+				latest = info.ModTime()
+			}
 			return nil
-		}
-		info, err := d.Info()
-		if err != nil {
-			return nil
-		}
-		if info.ModTime().After(latest) {
-			latest = info.ModTime()
-		}
-		return nil
-	})
+		})
+	}
 	return latest
 }

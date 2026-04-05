@@ -16,14 +16,14 @@ func main() {
 	outputFile := flag.String("output", "-", "output file. '-' will write to stdout")
 	jsonOutput := flag.Bool("json", false, "output JSON instead of HTML")
 	startType := flag.String("type", "k8s.io/api/core/v1.Pod", "initial type to display")
-	serveDir := flag.String("serve", "", "serve API docs from this directory on localhost:8080, watching for changes")
-	generateDir := flag.String("generate", "", "generate API docs website to this directory (source directory is a positional arg)")
+	serve := flag.Bool("serve", false, "serve API docs on localhost:8080, watching for changes (source directories are positional args)")
+	generateDir := flag.String("generate", "", "generate API docs website to this directory (source directories are positional args)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Generate Go API documentation.\n\n")
 		fmt.Fprintf(os.Stderr, "Usage: %s [flags] <package-directories...>\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "       %s -serve <source-dir>\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "       %s -generate <dest-dir> <source-dir>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "       %s -serve <source-dirs...>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "       %s -generate <dest-dir> <source-dirs...>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -33,8 +33,14 @@ func main() {
 		log.Fatalf("Error loading web assets: %v", err)
 	}
 
-	if *serveDir != "" {
-		runServe(*serveDir, webFS)
+	if *serve {
+		args := flag.Args()
+		if len(args) == 0 {
+			fmt.Fprintf(os.Stderr, "-serve requires at least one source directory as a positional argument\n")
+			flag.Usage()
+			os.Exit(1)
+		}
+		runServe(args, webFS)
 		return
 	}
 
