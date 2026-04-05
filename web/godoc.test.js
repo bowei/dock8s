@@ -1,13 +1,62 @@
 /**
  * @jest-environment jsdom
  */
-import { appendGoDoc } from './godoc.js';
+import { appendGoDoc, visibleElementsCount } from './godoc.js';
 
 function renderDocString(docString) {
   const out = document.createElement('div');
   appendGoDoc(docString, out);
   return out;
 }
+
+describe('visibleElementsCount', () => {
+  it('returns 0 for empty elements', () => {
+    expect(visibleElementsCount({ elements: [] })).toBe(0);
+  });
+
+  it('counts paragraph elements', () => {
+    expect(visibleElementsCount({
+      elements: [{ type: 'p', content: ['text'] }],
+    })).toBe(1);
+  });
+
+  it('counts heading elements', () => {
+    expect(visibleElementsCount({
+      elements: [{ type: 'h', content: ['heading'] }],
+    })).toBe(1);
+  });
+
+  it('counts list elements', () => {
+    expect(visibleElementsCount({
+      elements: [{ type: 'l', content: ['a', 'b'] }],
+    })).toBe(1);
+  });
+
+  it('counts code elements', () => {
+    expect(visibleElementsCount({
+      elements: [{ type: 'c', content: ['code'] }],
+    })).toBe(1);
+  });
+
+  it('does not count directive elements', () => {
+    expect(visibleElementsCount({
+      elements: [{ type: 'd', content: ['Deprecated:'] }],
+    })).toBe(0);
+  });
+
+  it('counts multiple visible elements, skipping directives', () => {
+    expect(visibleElementsCount({
+      elements: [
+        { type: 'p', content: ['text'] },
+        { type: 'd', content: ['Deprecated:'] },
+        { type: 'h', content: ['heading'] },
+        { type: 'l', content: ['item'] },
+        { type: 'd', content: ['another'] },
+        { type: 'c', content: ['code'] },
+      ],
+    })).toBe(4);
+  });
+});
 
 describe('appendGoDoc', () => {
   describe('paragraph (type "p")', () => {

@@ -31,19 +31,17 @@ function createDocString(docString) {
   summary.appendChild(stn);
   linkifyTextNode(stn);
 
-  // TODO: this should ignore elements with 
-  if (docString.elements.length > 1 || docString.elements[0].content.length > 1) {
-    const selipsis = document.createElement('span');
-    selipsis.textContent = ' [more]';
-    summary.appendChild(selipsis);
+  // TODO: expandSpan should only be added if there are more than one 
+  if (visibleElementsCount(docString) > 1 || docString.elements[0].content.length > 1) {
+    const expandSpan = document.createElement('span');
+    expandSpan.textContent = ' [more]';
+    summary.appendChild(expandSpan);
 
-    selipsis.addEventListener('click', () => {
+    expandSpan.addEventListener('click', () => {
       summary.hidden = !summary.hidden;
       details.hidden = !details.hidden;
       return false;
     });
-
-
   }
 
   appendGoDoc(docString, details);
@@ -113,6 +111,22 @@ function appendGoDoc(docString, out) {
       }
     }
   });
+}
+
+/**
+ * @param {object} docString docString is a JSON with schema from pkg/godoc.go GoDocString
+ * @returns {number} count of visible elements in the docString.
+ */
+function visibleElementsCount(docString) {
+  var length = 0;
+  docString.elements.forEach(elem => {
+    switch (elem.type) {
+      case 'd': { break; }
+      default:
+        length++;
+    }
+  });
+  return length;
 }
 
 /**
@@ -186,7 +200,8 @@ function getFirstSentence(text) {
   return match ? match[0] : text;
 }
 
-export { 
-  createDocString, 
+export {
+  createDocString,
   appendGoDoc,
+  visibleElementsCount,
 };
