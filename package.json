@@ -1,7 +1,7 @@
 {
-  "name": "rex",
+  "name": "dock8s",
   "version": "1.0.0",
-  "description": "Generates documentation for Go plain-old-data style APIs (e.g. Kubernetes) in a multi-column format. An example of the output can be [found here][example].",
+  "description": "Generates documentation for Go plain-old-data style APIs (e.g. Kubernetes)",
   "main": "index.js",
   "directories": {
     "doc": "doc"

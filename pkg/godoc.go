@@ -24,6 +24,7 @@ const (
 	// GoDocCode represents a preformatted code block.
 	GoDocCode GoDocElemType = "c"
 	// GoDocDirective represents a special directive, like "Deprecated:".
+	// Special directives are not show directly.
 	GoDocDirective GoDocElemType = "d"
 )
 

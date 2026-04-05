@@ -1,4 +1,4 @@
-// app.js
+import { appendGoDoc } from "./utils.js";
 
 let isProgrammaticallyUpdatingHash = false;
 const mainContainer = document.getElementById('main-container');
@@ -71,9 +71,10 @@ function createDocString(docString) {
   summary.appendChild(stn);
   linkifyTextNode(stn);
 
+  // TODO: this should ignore elements with 
   if (docString.elements.length > 1 || docString.elements[0].content.length > 1) {
     const selipsis = document.createElement('span');
-    selipsis.textContent = ' ...';
+    selipsis.textContent = ' [more]';
     summary.appendChild(selipsis);
 
     selipsis.addEventListener('click', () => {
@@ -85,63 +86,7 @@ function createDocString(docString) {
 
   }
 
-  docString.elements.forEach(elem => {
-    switch (elem.type) {
-      case 'p': {
-        const p = document.createElement('p');
-        elem.content[0].split('\n').forEach((line, index, arr) => {
-          const tn = document.createTextNode(line);
-          p.appendChild(tn);
-          linkifyTextNode(tn);
-          if (index < arr.length - 1) {
-            p.appendChild(document.createElement('br'));
-          }
-        });
-        details.appendChild(p);
-        break;
-      }
-      case 'h': {
-        const h = document.createElement('div');
-        h.className = 'heading';
-        h.textContent = elem.content[0];
-        details.appendChild(h);
-        break;
-      }
-      case 'l': {
-        const ul = document.createElement('ul');
-        elem.content.forEach(itemText => {
-          const li = document.createElement('li');
-          itemText.split('\n').forEach((line, index, arr) => {
-            const tn = document.createTextNode(line)
-            li.appendChild(tn);
-            linkifyTextNode(tn);
-            if (index < arr.length - 1) {
-              li.appendChild(document.createElement('br'));
-            }
-          });
-          ul.appendChild(li);
-        });
-        details.appendChild(ul);
-        break;
-      }
-      case 'c': {
-        const pre = document.createElement('pre');
-        const code = document.createElement('code');
-        code.textContent = elem.content[0];
-        pre.appendChild(code);
-        details.appendChild(pre);
-        break;
-      }
-      case 'd': {
-        break; // TODO: ignore this for now.
-        const p = document.createElement('p');
-        p.className = 'directive';
-        p.textContent = elem.content[0];
-        details.appendChild(p);
-        break;
-      }
-    }
-  });
+  appendGoDoc(docString, details);
 
   return container;
 }
@@ -775,6 +720,6 @@ helpDialogOverlay.addEventListener('click', () => {
   hideHelpDialog();
 });
 
-module.exports = {
+export default {
   splitTypeName,
 };
