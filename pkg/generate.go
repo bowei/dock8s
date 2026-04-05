@@ -12,7 +12,6 @@ import (
 )
 
 // AutoStartType returns the first root type alphabetically.
-// TODO: Allow specifying the start type via command line flag.
 func AutoStartType(types map[string]TypeInfo) string {
 	var rootTypes []string
 	for name, ti := range types {
@@ -29,8 +28,12 @@ func AutoStartType(types map[string]TypeInfo) string {
 
 // WriteWebsite generates a complete website to destDir, copying webFS assets
 // and writing a generated data.js. webFS should be rooted at the web assets
-// directory (i.e. index.html at the root of the FS).
-func WriteWebsite(types map[string]TypeInfo, destDir string, webFS fs.FS) error {
+// directory (i.e. index.html at the root of the FS). startType specifies the
+// initial type to display; if empty, AutoStartType is used.
+func WriteWebsite(types map[string]TypeInfo, destDir string, webFS fs.FS, startType string) error {
+	if startType == "" {
+		startType = AutoStartType(types)
+	}
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return fmt.Errorf("creating destination directory: %w", err)
 	}
@@ -42,7 +45,7 @@ func WriteWebsite(types map[string]TypeInfo, destDir string, webFS fs.FS) error 
 		return fmt.Errorf("creating data.js: %w", err)
 	}
 	defer f.Close()
-	return GenerateDataJS(types, f, AutoStartType(types))
+	return GenerateDataJS(types, f, startType)
 }
 
 func copyFS(destDir string, srcFS fs.FS) error {

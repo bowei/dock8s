@@ -330,10 +330,16 @@ func processStruct(
 			hasObjectMeta = true
 		}
 	}
-	if hasTypeMeta && hasObjectMeta {
+	if hasTypeMeta && hasObjectMeta && rootObjectFilter(typeInfo) {
 		typeInfo.IsRoot = true
 	}
 	return nil
+}
+
+func rootObjectFilter(typeInfo *TypeInfo) bool {
+	// Filter out meta.v1.PartialObjectMetadata, which embeds TypeMeta+ObjectMeta
+	// but is not itself a real API resource.
+	return typeInfo.TypeName != "PartialObjectMetadata"
 }
 
 // findConstantsByType finds constants that have an explicit type matching the target type

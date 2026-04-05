@@ -49,7 +49,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error parsing packages: %v", err)
 		}
-		if err := pkg.WriteWebsite(allTypes, *generateDir, webFS); err != nil {
+		if err := pkg.WriteWebsite(allTypes, *generateDir, webFS, *startType); err != nil {
 			log.Fatalf("Error generating website: %v", err)
 		}
 		log.Printf("Website written to %s", *generateDir)
