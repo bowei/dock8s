@@ -1,6 +1,6 @@
 import { createColumn } from './column.js';
 import { computeHash, restoreFromHash } from './hash.js';
-import { populateSearchDialogList } from './search.js';
+import { populateSearchDialogList, populateFieldSearchList } from './search.js';
 
 let isProgrammaticallyUpdatingHash = false;
 const mainContainer = document.getElementById('main-container');
@@ -75,10 +75,16 @@ function hideHelpDialog() {
   helpDialogOverlay.style.display = 'none';
 }
 
-function selectType(typeName) {
-  console.log(`Type selected: ${typeName}`);
+function selectItem(li) {
+  if (li.classList.contains('search-results-truncated')) return;
   hideSearchDialog();
-  window.location.hash = '#' + typeName;
+  if (li.dataset.searchMode === 'field') {
+    console.log(`Field selected: ${li.dataset.parentTypeName}.${li.dataset.fieldName}`);
+    window.location.hash = '#' + li.dataset.parentTypeName + '/' + li.dataset.fieldName;
+  } else {
+    console.log(`Type selected: ${li.dataset.typeName}`);
+    window.location.hash = '#' + li.dataset.typeName;
+  }
 }
 
 function init() {
@@ -257,7 +263,12 @@ helpText.addEventListener('click', () => {
 });
 
 searchDialogInput.addEventListener('input', () => {
-  populateSearchDialogList(searchDialogInput.value, typeData, searchDialogList);
+  const value = searchDialogInput.value;
+  if (value.startsWith('f:')) {
+    populateFieldSearchList(value.slice(2), typeData, searchDialogList);
+  } else {
+    populateSearchDialogList(value, typeData, searchDialogList);
+  }
 });
 
 searchDialogInput.addEventListener('keydown', (event) => {
@@ -265,15 +276,19 @@ searchDialogInput.addEventListener('keydown', (event) => {
     event.preventDefault();
     const selected = searchDialogList.querySelector('li.selected');
     if (selected) {
-      selectType(selected.dataset.typeName);
+      selectItem(selected);
     }
   } else if (event.key === 'ArrowDown') {
     event.preventDefault();
     const selected = searchDialogList.querySelector('li.selected');
-    if (selected && selected.nextElementSibling) {
-      selected.classList.remove('selected');
-      selected.nextElementSibling.classList.add('selected');
-      selected.nextElementSibling.scrollIntoView({ block: 'nearest' });
+    if (selected) {
+      let next = selected.nextElementSibling;
+      if (next && next.classList.contains('search-results-truncated')) next = null;
+      if (next) {
+        selected.classList.remove('selected');
+        next.classList.add('selected');
+        next.scrollIntoView({ block: 'nearest' });
+      }
     }
   } else if (event.key === 'ArrowUp') {
     event.preventDefault();
@@ -289,7 +304,7 @@ searchDialogInput.addEventListener('keydown', (event) => {
 searchDialogList.addEventListener('click', (event) => {
   const li = event.target.closest('li');
   if (li) {
-    selectType(li.dataset.typeName);
+    selectItem(li);
   }
 });
 
