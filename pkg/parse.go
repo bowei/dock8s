@@ -217,27 +217,16 @@ func resolveTypeRecursive(
 	return "", nil
 }
 
-func processStruct(
-	typeInfo *TypeInfo,
-	typeSpec *ast.TypeSpec,
-	structType *ast.StructType,
-	files []*ast.File,
-	pkgImportPath string,
-	externalPkgs map[string]bool,
-) error {
-	log.Printf("processing struct %s", typeInfo.TypeName)
-	// Find the file that contains this type spec
-	var file *ast.File
+func findFileForTypeSpec(typeSpec *ast.TypeSpec, files []*ast.File) *ast.File {
 	for _, f := range files {
 		if f.Pos() <= typeSpec.Pos() && typeSpec.Pos() < f.End() {
-			file = f
-			break
+			return f
 		}
 	}
-	if file == nil {
-		return fmt.Errorf("file not found for type %s", typeInfo.TypeName)
-	}
+	return nil
+}
 
+func buildImportMap(file *ast.File) map[string]string {
 	importMap := make(map[string]string)
 	for _, i := range file.Imports {
 		path := strings.Trim(i.Path.Value, `"`)
@@ -248,6 +237,35 @@ func processStruct(
 			importMap[parts[len(parts)-1]] = path
 		}
 	}
+	return importMap
+}
+
+func makeFieldInfo(fieldName, fieldType, fieldPkg string, decorators []string, fieldDoc string) FieldInfo {
+	return FieldInfo{
+		FieldName:       fieldName,
+		TypeName:        fieldType,
+		Package:         fieldPkg,
+		TypeDecorators:  decorators,
+		DocString:       fieldDoc,
+		ParsedDocString: *parseGoDocString(fieldDoc),
+	}
+}
+
+func processStruct(
+	typeInfo *TypeInfo,
+	typeSpec *ast.TypeSpec,
+	structType *ast.StructType,
+	files []*ast.File,
+	pkgImportPath string,
+	externalPkgs map[string]bool,
+) error {
+	log.Printf("processing struct %s", typeInfo.TypeName)
+	file := findFileForTypeSpec(typeSpec, files)
+	if file == nil {
+		return fmt.Errorf("file not found for type %s", typeInfo.TypeName)
+	}
+
+	importMap := buildImportMap(file)
 
 	if structType.Fields != nil {
 		for _, field := range structType.Fields.List {
@@ -290,29 +308,13 @@ func processStruct(
 						continue
 					}
 					log.Printf("            found exported field: %s %s", name.Name, fieldType)
-					fieldInfo := FieldInfo{
-						FieldName:       name.Name,
-						TypeName:        fieldType,
-						Package:         fieldPkg,
-						TypeDecorators:  decorators,
-						DocString:       fieldDoc,
-						ParsedDocString: *parseGoDocString(fieldDoc),
-					}
-					typeInfo.Fields = append(typeInfo.Fields, fieldInfo)
+					typeInfo.Fields = append(typeInfo.Fields, makeFieldInfo(name.Name, fieldType, fieldPkg, decorators, fieldDoc))
 				}
 			} else { // Embedded field
 				log.Printf("found embedded field of type: %s", fieldType)
 				parts := strings.Split(fieldType, ".")
 				fieldName := parts[len(parts)-1]
-				fieldInfo := FieldInfo{
-					FieldName:       fieldName,
-					TypeName:        fieldType,
-					Package:         fieldPkg,
-					TypeDecorators:  decorators,
-					DocString:       fieldDoc,
-					ParsedDocString: *parseGoDocString(fieldDoc),
-				}
-				typeInfo.Fields = append(typeInfo.Fields, fieldInfo)
+				typeInfo.Fields = append(typeInfo.Fields, makeFieldInfo(fieldName, fieldType, fieldPkg, decorators, fieldDoc))
 			}
 		}
 	}
@@ -342,20 +344,17 @@ func rootObjectFilter(typeInfo *TypeInfo) bool {
 	return typeInfo.TypeName != "PartialObjectMetadata"
 }
 
-// findConstantsByType finds constants that have an explicit type matching the target type
-func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo {
-	var enumValues []EnumInfo
-
-	// log.Printf("docPkg = %s", pretty.Sprint(docPkg))
-
+// collectDeclsForType collects all GenDecl nodes from docPkg that may contain
+// constants or variables for the given type name.
+func collectDeclsForType(docPkg *doc.Package, targetTypeName string) []*ast.GenDecl {
 	var decls []*ast.GenDecl
-	// Const parsed at the package level.
+	// Consts parsed at the package level.
 	for _, c := range docPkg.Consts {
 		if c.Decl != nil {
 			decls = append(decls, c.Decl)
 		}
 	}
-	// Const parsed into the type decl.
+	// Consts/vars parsed into the type decl.
 	for _, ty := range docPkg.Types {
 		if ty.Name == targetTypeName {
 			for _, c := range ty.Consts {
@@ -367,6 +366,16 @@ func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo 
 			break
 		}
 	}
+	return decls
+}
+
+// findConstantsByType finds constants that have an explicit type matching the target type
+func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo {
+	var enumValues []EnumInfo
+
+	// log.Printf("docPkg = %s", pretty.Sprint(docPkg))
+
+	decls := collectDeclsForType(docPkg, targetTypeName)
 
 	for _, d := range decls {
 		for _, spec := range d.Specs {
@@ -462,22 +471,13 @@ func processEnum(typeInfo *TypeInfo, ident *ast.Ident, docPkg *doc.Package) bool
 	return true
 }
 
-func parsePackage(pkgDir string, allTypes map[string]TypeInfo) (map[string]bool, error) {
-	pkgImportPath, err := getPkgPathFromDir(pkgDir)
-	if err != nil {
-		log.Printf("Skipping directory %s, not a Go package: %v", pkgDir, err)
-		return nil, nil
-	}
-	log.Printf("parsing package: %s", pkgImportPath)
-
+// parseGoFiles reads and parses all non-test .go files in pkgDir.
+func parseGoFiles(pkgDir string) ([]*ast.File, *token.FileSet, error) {
 	fset := token.NewFileSet()
 	entries, err := os.ReadDir(pkgDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	externalPkgs := make(map[string]bool)
-
 	var files []*ast.File
 	for _, entry := range entries {
 		name := entry.Name()
@@ -486,10 +486,27 @@ func parsePackage(pkgDir string, allTypes map[string]TypeInfo) (map[string]bool,
 		}
 		f, err := parser.ParseFile(fset, filepath.Join(pkgDir, name), nil, parser.ParseComments)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		files = append(files, f)
 	}
+	return files, fset, nil
+}
+
+func parsePackage(pkgDir string, allTypes map[string]TypeInfo) (map[string]bool, error) {
+	pkgImportPath, err := getPkgPathFromDir(pkgDir)
+	if err != nil {
+		log.Printf("Skipping directory %s, not a Go package: %v", pkgDir, err)
+		return nil, nil
+	}
+	log.Printf("parsing package: %s", pkgImportPath)
+
+	files, fset, err := parseGoFiles(pkgDir)
+	if err != nil {
+		return nil, err
+	}
+
+	externalPkgs := make(map[string]bool)
 
 	if len(files) == 0 {
 		return externalPkgs, nil

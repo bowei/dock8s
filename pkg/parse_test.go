@@ -834,6 +834,288 @@ type SimpleAlias int
 	}
 }
 
+func TestFindFileForTypeSpec(t *testing.T) {
+	src1 := `package p; type A struct{}`
+	src2 := `package p; type B struct{}`
+
+	fset := token.NewFileSet()
+	f1, err := parser.ParseFile(fset, "a.go", src1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2, err := parser.ParseFile(fset, "b.go", src2, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	files := []*ast.File{f1, f2}
+	docPkg, err := doc.NewFromFiles(fset, files, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	typesByName := map[string]*doc.Type{}
+	for _, t := range docPkg.Types {
+		typesByName[t.Name] = t
+	}
+
+	specA := typesByName["A"].Decl.Specs[0].(*ast.TypeSpec)
+	specB := typesByName["B"].Decl.Specs[0].(*ast.TypeSpec)
+
+	if got := findFileForTypeSpec(specA, files); got != f1 {
+		t.Errorf("A: expected f1, got %v", got)
+	}
+	if got := findFileForTypeSpec(specB, files); got != f2 {
+		t.Errorf("B: expected f2, got %v", got)
+	}
+}
+
+func TestFindFileForTypeSpec_NotFound(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "a.go", `package p; type A struct{}`, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	specA := docPkg.Types[0].Decl.Specs[0].(*ast.TypeSpec)
+
+	// Pass an empty file list — spec should not be found.
+	if got := findFileForTypeSpec(specA, nil); got != nil {
+		t.Errorf("expected nil, got %v", got)
+	}
+}
+
+func TestBuildImportMap(t *testing.T) {
+	src := `package p
+
+import (
+	"fmt"
+	mymeta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	_ "unsafe"
+)
+`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "p.go", src, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := buildImportMap(f)
+
+	want := map[string]string{
+		"fmt":     "fmt",
+		"mymeta":  "k8s.io/apimachinery/pkg/apis/meta/v1",
+		"_":       "unsafe",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestBuildImportMap_Empty(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "p.go", `package p`, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := buildImportMap(f)
+	if len(got) != 0 {
+		t.Errorf("expected empty map, got %v", got)
+	}
+}
+
+func TestMakeFieldInfo(t *testing.T) {
+	decorators := []string{"Ptr", "List"}
+	doc := "some doc"
+	got := makeFieldInfo("MyField", "pkg.MyType", "pkg", decorators, doc)
+
+	want := FieldInfo{
+		FieldName:      "MyField",
+		TypeName:       "pkg.MyType",
+		Package:        "pkg",
+		TypeDecorators: []string{"Ptr", "List"},
+		DocString:      doc,
+		ParsedDocString: GoDocString{
+			Elements: []GoDocElem{
+				{Type: "p", Content: []string{"some doc"}},
+			},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %#v, want %#v", got, want)
+	}
+}
+
+func TestMakeFieldInfo_NilDecorators(t *testing.T) {
+	got := makeFieldInfo("F", "string", "", nil, "")
+	if got.TypeDecorators != nil {
+		t.Errorf("expected nil TypeDecorators, got %v", got.TypeDecorators)
+	}
+}
+
+func TestCollectDeclsForType(t *testing.T) {
+	src := `package p
+
+type MyType string
+
+const PackageLevelConst MyType = "a"
+
+const (
+	// Val1 is a value.
+	Val1 MyType = "b"
+	Unrelated = "x"
+)
+
+var TypeLevelVar MyType = "c"
+`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "p.go", src, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decls := collectDeclsForType(docPkg, "MyType")
+
+	// Count how many ValueSpecs with explicit MyType appear across all collected decls.
+	count := 0
+	for _, d := range decls {
+		for _, spec := range d.Specs {
+			vs, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			if vs.Type != nil {
+				if id, ok := vs.Type.(*ast.Ident); ok && id.Name == "MyType" {
+					count += len(vs.Names)
+				}
+			}
+		}
+	}
+	// PackageLevelConst, Val1, TypeLevelVar — all three should be reachable.
+	if count != 3 {
+		t.Errorf("expected 3 MyType specs across collected decls, got %d", count)
+	}
+}
+
+func TestCollectDeclsForType_NoMatch(t *testing.T) {
+	src := `package p
+
+type MyType string
+
+const Other = "x"
+`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "p.go", src, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Package-level consts still collected; type-level lookup finds nothing.
+	decls := collectDeclsForType(docPkg, "NonExistent")
+	// Only package-level consts (none typed as NonExistent), but the slice itself
+	// is non-nil because there is one package-level const decl.
+	for _, d := range decls {
+		for _, spec := range d.Specs {
+			vs, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			if vs.Type != nil {
+				if id, ok := vs.Type.(*ast.Ident); ok && id.Name == "NonExistent" {
+					t.Errorf("unexpectedly found NonExistent spec: %v", vs)
+				}
+			}
+		}
+	}
+}
+
+func TestParseGoFiles(t *testing.T) {
+	dir, err := os.MkdirTemp("", "parsego")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	files := map[string]string{
+		"a.go":      `package p; type A struct{}`,
+		"b.go":      `package p; type B struct{}`,
+		"a_test.go": `package p; type TestOnly struct{}`,
+		"README.md": `not go`,
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	parsed, fset, err := parseGoFiles(dir)
+	if err != nil {
+		t.Fatalf("parseGoFiles: %v", err)
+	}
+	if fset == nil {
+		t.Fatal("expected non-nil FileSet")
+	}
+	if len(parsed) != 2 {
+		t.Errorf("expected 2 files (a.go, b.go), got %d", len(parsed))
+	}
+	// Verify test file was excluded — none of the parsed files should declare TestOnly.
+	for _, f := range parsed {
+		for _, decl := range f.Decls {
+			gd, ok := decl.(*ast.GenDecl)
+			if !ok {
+				continue
+			}
+			for _, spec := range gd.Specs {
+				ts, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					continue
+				}
+				if ts.Name.Name == "TestOnly" {
+					t.Error("_test.go file should not have been parsed")
+				}
+			}
+		}
+	}
+}
+
+func TestParseGoFiles_EmptyDir(t *testing.T) {
+	dir, err := os.MkdirTemp("", "parsego_empty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	parsed, fset, err := parseGoFiles(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fset == nil {
+		t.Fatal("expected non-nil FileSet")
+	}
+	if len(parsed) != 0 {
+		t.Errorf("expected 0 files, got %d", len(parsed))
+	}
+}
+
+func TestParseGoFiles_BadDir(t *testing.T) {
+	_, _, err := parseGoFiles("/nonexistent/path/that/does/not/exist")
+	if err == nil {
+		t.Error("expected error for non-existent directory")
+	}
+}
+
 func TestParsePackages(t *testing.T) {
 	// 1. Create temp directory structure
 	tempDir, err := os.MkdirTemp("", "test-parse-packages")
