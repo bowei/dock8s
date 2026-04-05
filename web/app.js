@@ -1,4 +1,4 @@
-import { createDocString } from "./utils.js";
+import { createDocString } from "./godoc.js";
 
 let isProgrammaticallyUpdatingHash = false;
 const mainContainer = document.getElementById('main-container');

@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { appendGoDoc } from './utils.js';
+import { appendGoDoc } from './godoc.js';
 
 function renderDocString(docString) {
   const out = document.createElement('div');
