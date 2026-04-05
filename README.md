@@ -2,6 +2,8 @@
 
 dock8s is a API explorer for Kubernetes APIs defined in Golang.
 
+![example](dock8s-example.png)
+
 ## Serve API docs
 
 Start a web server on localhost, serving the APIs in the `./apis` directory:
