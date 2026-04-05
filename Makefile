@@ -8,6 +8,7 @@ all: test build
 .PHONY: build
 build: themes $(EXEC)
 
+.PHONY: $(EXEC)
 $(EXEC):
 	@echo "[BUILD] $@"
 	go build -o $(EXEC) ./cmd/dock8s
