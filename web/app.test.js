@@ -8,6 +8,7 @@ document.body.innerHTML = `
   <div id="search-dialog-overlay" style="display: none;">
     <div id="search-dialog-dialog">
       <input id="search-dialog-input" />
+      <div id="search-dialog-status"></div>
       <ul id="search-dialog-list"></ul>
     </div>
   </div>

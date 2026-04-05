@@ -1,6 +1,6 @@
 import { createColumn } from './column.js';
 import { computeHash, restoreFromHash } from './hash.js';
-import { populateSearchDialogList, populateFieldSearchList } from './search.js';
+import { populateSearchDialogList, populateFieldSearchList, FIELD_SEARCH_LIMIT } from './search.js';
 
 let isProgrammaticallyUpdatingHash = false;
 const mainContainer = document.getElementById('main-container');
@@ -8,6 +8,7 @@ const searchDialogOverlay = document.getElementById('search-dialog-overlay');
 const searchDialogDialog = document.getElementById('search-dialog-dialog');
 const searchDialogInput = document.getElementById('search-dialog-input');
 const searchDialogList = document.getElementById('search-dialog-list');
+const searchDialogStatus = document.getElementById('search-dialog-status');
 const helpDialogOverlay = document.getElementById('help-dialog-overlay');
 const helpDialogDialog = document.getElementById('help-dialog-dialog');
 const helpText = document.getElementById('help-text');
@@ -62,6 +63,7 @@ function showSearchDialog() {
 function hideSearchDialog() {
   console.log('Hiding search dialog');
   searchDialogInput.value = '';
+  searchDialogStatus.textContent = '';
   searchDialogOverlay.style.display = 'none';
 }
 
@@ -265,9 +267,11 @@ helpText.addEventListener('click', () => {
 searchDialogInput.addEventListener('input', () => {
   const value = searchDialogInput.value;
   if (value.startsWith('f:')) {
-    populateFieldSearchList(value.slice(2), typeData, searchDialogList);
+    const { truncated } = populateFieldSearchList(value.slice(2), typeData, searchDialogList);
+    searchDialogStatus.textContent = truncated ? `Showing top ${FIELD_SEARCH_LIMIT} results — refine your search` : '';
   } else {
     populateSearchDialogList(value, typeData, searchDialogList);
+    searchDialogStatus.textContent = '';
   }
 });
 

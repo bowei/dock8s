@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { populateSearchDialogList, buildReachableTypes, findFieldPaths, populateFieldSearchList } from './search.js';
+import { populateSearchDialogList, buildReachableTypes, findFieldPaths, populateFieldSearchList, FIELD_SEARCH_LIMIT } from './search.js';
 
 const typeData = {
   'example.io/v1.Pod': { typeName: 'Pod', package: 'example.io/v1', isRoot: true },
@@ -320,7 +320,7 @@ describe('populateFieldSearchList', () => {
     expect(first.classList.contains('selected')).toBe(true);
   });
 
-  it('shows truncation indicator when results hit the limit', () => {
+  it('returns truncated:true and caps list at FIELD_SEARCH_LIMIT when results hit the limit', () => {
     const bigData = {
       'example.io/v1.Root': {
         typeName: 'Root', package: 'example.io/v1', isRoot: true,
@@ -328,18 +328,15 @@ describe('populateFieldSearchList', () => {
       },
     };
     const list = makeList();
-    populateFieldSearchList('field', bigData, list);
-    const realItems = list.querySelectorAll('li:not(.search-results-truncated)');
-    const truncItems = list.querySelectorAll('li.search-results-truncated');
-    expect(realItems.length).toBe(50);
-    expect(truncItems.length).toBe(1);
-    expect(truncItems[0].textContent).toMatch(/50\+/);
+    const { truncated } = populateFieldSearchList('field', bigData, list);
+    expect(truncated).toBe(true);
+    expect(list.querySelectorAll('li').length).toBe(FIELD_SEARCH_LIMIT);
   });
 
-  it('does not show truncation indicator when results are within limit', () => {
+  it('returns truncated:false when results are within limit', () => {
     const list = makeList();
-    populateFieldSearchList('phase', fieldTypeData, list);
-    expect(list.querySelectorAll('li.search-results-truncated').length).toBe(0);
+    const { truncated } = populateFieldSearchList('phase', fieldTypeData, list);
+    expect(truncated).toBe(false);
   });
 
   it('clears previous results on each call', () => {

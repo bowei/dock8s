@@ -1,4 +1,4 @@
-const FIELD_SEARCH_LIMIT = 50;
+export const FIELD_SEARCH_LIMIT = 50;
 
 // populateSearchDialogList fills listEl with filtered, sorted root types.
 //
@@ -164,6 +164,7 @@ export function populateFieldSearchList(filter, typeData, listEl) {
     return a.path.join('/').localeCompare(b.path.join('/'));
   });
 
+  // matches.length === FIELD_SEARCH_LIMIT means DFS stopped early; there may be more.
   const truncated = matches.length >= FIELD_SEARCH_LIMIT;
 
   for (const { rootTypeName, path } of matches) {
@@ -188,14 +189,9 @@ export function populateFieldSearchList(filter, typeData, listEl) {
     listEl.appendChild(li);
   }
 
-  if (truncated) {
-    const truncLi = document.createElement('li');
-    truncLi.className = 'search-results-truncated';
-    truncLi.textContent = `${FIELD_SEARCH_LIMIT}+ results — refine your search`;
-    listEl.appendChild(truncLi);
-  }
-
   if (listEl.firstChild) {
     listEl.firstChild.classList.add('selected');
   }
+
+  return { truncated };
 }
