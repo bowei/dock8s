@@ -5,8 +5,7 @@ CSS_FILES := $(THEME_FILES:less=css)
 # Default target
 all: test build
 
-# Build the rex binary
-.PHONY: themes
+.PHONY: build
 build: themes $(EXEC)
 
 $(EXEC):
@@ -23,12 +22,10 @@ themes: $(CSS_FILES)
 	@echo "[BUILD] themes"
 	@echo "All themes built successfully!"
 
-web/theme-%.css: web/theme-%.less pkg/app.less
+web/theme-%.css: web/theme-%.less web/app.less
 	@echo "[BUILD] $*"
-	@cp $< web/theme.less
-	lessc web/app.less $@
-	@echo "✓ $* theme generated: $@"
-	@rm web/theme.less
+	lessc $< $@
+	@echo "✓ theme generated: $@"
 
 .PHONY: clean
 clean: clean-themes
@@ -38,7 +35,7 @@ clean: clean-themes
 .PHONY: clean-themes
 clean-themes:
 	@echo "[CLEAN] themes"
-	@rm -f $(CSS_FILES)
+	rm -f $(CSS_FILES)
 	@echo "✓ Themes cleaned."
 
 .PHONY: test-js
