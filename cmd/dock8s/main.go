@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/bowei/k8s-misc/rex/pkg"
+	"github.com/bowei/dock8s/pkg"
 )
 
 func main() {
