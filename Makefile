@@ -1,5 +1,5 @@
 EXEC := dock8s
-THEME_FILES := $(wildcard web/variables-*.less)
+THEME_FILES := $(wildcard web/theme-*.less)
 CSS_FILES := $(THEME_FILES:less=css)
 
 # Default target
@@ -21,15 +21,14 @@ test:
 .PHONY: themes
 themes: $(CSS_FILES)
 	@echo "[BUILD] themes"
-	@rm -f pkg/variables.less
 	@echo "All themes built successfully!"
 
-web/app-%.css: pkg/variables-%.less pkg/app.less
+web/theme-%.css: web/theme-%.less pkg/app.less
 	@echo "[BUILD] $*"
-	@cp $< web/variables.less
+	@cp $< web/theme.less
 	lessc web/app.less $@
 	@echo "✓ $* theme generated: $@"
-	@rm web/variables.less
+	@rm web/theme.less
 
 .PHONY: clean
 clean: clean-themes
