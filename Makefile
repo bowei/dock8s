@@ -3,7 +3,12 @@ THEME_FILES := $(wildcard web/theme-*.less)
 CSS_FILES := $(THEME_FILES:less=css)
 
 # Default target
-all: test build
+all: check-setup test build
+
+.PHONY: check-setup
+check-setup:
+	@echo "[CHECK] setup"
+	@hack/check-setup.sh
 
 .PHONY: build
 build: themes $(EXEC)
