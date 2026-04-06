@@ -25,7 +25,10 @@ removes columns to the right of the active one.
 ### Docstrings
 
 Each field may have a docstring. Long docstrings are collapsed to a summary
-line; pressing `Enter` (keyboard) toggles the full text.
+line; pressing `Enter` (keyboard) or clicking the expand button toggles the
+full text. Expansion state is remembered in memory: if the user navigates away
+and back to a field, its docstring remains expanded or collapsed as they left
+it.
 
 ## Navigation
 
