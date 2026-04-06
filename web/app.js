@@ -174,6 +174,10 @@ function init() {
       return;
     }
     console.log('hashchange event');
+    if (!window.location.hash.substring(1)) {
+      showSearchDialog();
+      return;
+    }
     restoreFromHash(window.location.hash.substring(1), typeData, mainContainer, makeColumn);
   });
 
@@ -182,20 +186,7 @@ function init() {
     return;
   }
 
-  if (startTypes) {
-    const initialColumn = makeColumn(startTypes);
-    if (initialColumn) {
-      mainContainer.appendChild(initialColumn);
-    }
-  } else {
-    const firstTypeName = Object.keys(typeData)[0];
-    if (firstTypeName) {
-      const initialColumn = makeColumn(firstTypeName);
-      if (initialColumn) {
-        mainContainer.appendChild(initialColumn);
-      }
-    }
-  }
+  showSearchDialog();
   connectLiveReload();
 }
 

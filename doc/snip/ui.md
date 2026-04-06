@@ -63,6 +63,7 @@ work because each hash change is a new history entry.
 On load (or on a `hashchange` event), the app restores the full column chain
 from the hash: it opens the root type as the first column, then walks the field
 path — selecting each field and opening its type — until the chain is exhausted.
+If the hash is empty, the search dialog is opened automatically.
 
 ## Search
 
