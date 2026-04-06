@@ -41,3 +41,7 @@ $ git clone git@github.com:kubernetes-sigs/gateway-api.git
 $ cd gateway-api
 $ dock8s -serve apis apisx
 ```
+
+## Building
+
+`make` will build the `dock8s` executable.
