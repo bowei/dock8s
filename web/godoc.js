@@ -40,10 +40,10 @@ function createDocString(docString) {
     // expandSpan.textContent = ' [expand]';
     summary.appendChild(expandSpan);
 
-    expandSpan.addEventListener('click', () => {
+    expandSpan.addEventListener('click', (event) => {
+      event.stopPropagation();
       summary.hidden = !summary.hidden;
       details.hidden = !details.hidden;
-      return false;
     });
   }
 
