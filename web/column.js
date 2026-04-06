@@ -6,7 +6,8 @@ import { splitTypeName, formatDecorators } from './utils.js';
 // @param {string} typeName - fully qualified type name
 // @param {object} typeData - map of typeName -> TypeInfo
 // @param {function} onFieldClick - called with the li element when a field is clicked
-export function createColumn(typeName, typeData, onFieldClick) {
+// @param {Set<string>} expandedDocStrings - set of "parentType.fieldName" keys that are expanded
+export function createColumn(typeName, typeData, onFieldClick, expandedDocStrings) {
   const typeInfo = typeData[typeName];
   if (!typeInfo) return null;
 
@@ -63,7 +64,18 @@ export function createColumn(typeName, typeData, onFieldClick) {
       contentWrapper.appendChild(line1);
       contentWrapper.appendChild(line2);
       if (field.docString) {
-        contentWrapper.appendChild(createDocString(field.parsedDocString));
+        const expandKey = typeName + '.' + field.fieldName;
+        const docStringEl = createDocString(field.parsedDocString);
+        docStringEl.dataset.expandKey = expandKey;
+        if (expandedDocStrings && expandedDocStrings.has(expandKey)) {
+          const summary = docStringEl.children[0];
+          const details = docStringEl.children[1];
+          if (summary && details) {
+            summary.hidden = true;
+            details.hidden = false;
+          }
+        }
+        contentWrapper.appendChild(docStringEl);
       }
 
       li.appendChild(contentWrapper);

@@ -3,6 +3,7 @@ import { computeHash, restoreFromHash } from './hash.js';
 import { populateSearchDialogList, populateFieldSearchList, FIELD_SEARCH_LIMIT } from './search.js';
 
 let isProgrammaticallyUpdatingHash = false;
+const expandedDocStrings = new Set();
 const mainContainer = document.getElementById('main-container');
 const searchDialogOverlay = document.getElementById('search-dialog-overlay');
 const searchDialogDialog = document.getElementById('search-dialog-dialog');
@@ -14,7 +15,24 @@ const helpDialogDialog = document.getElementById('help-dialog-dialog');
 const helpText = document.getElementById('help-text');
 
 function makeColumn(typeName) {
-  return createColumn(typeName, typeData, handleFieldClick);
+  return createColumn(typeName, typeData, handleFieldClick, expandedDocStrings);
+}
+
+function toggleDocString(docStringEl) {
+  const summary = docStringEl.children[0];
+  const details = docStringEl.children[1];
+  if (summary && details && summary.querySelector('span')) {
+    summary.hidden = !summary.hidden;
+    details.hidden = !details.hidden;
+    const key = docStringEl.dataset.expandKey;
+    if (key) {
+      if (details.hidden) {
+        expandedDocStrings.delete(key);
+      } else {
+        expandedDocStrings.add(key);
+      }
+    }
+  }
 }
 
 function handleFieldClick(listItem) {
@@ -287,12 +305,7 @@ function handleKeyDown(event) {
     case 'Enter': {
       const docString = activeSelection.querySelector('.doc-string');
       if (docString) {
-        const summary = docString.children[0];
-        const details = docString.children[1];
-        if (summary && details && summary.querySelector('span')) {
-          summary.hidden = !summary.hidden;
-          details.hidden = !details.hidden;
-        }
+        toggleDocString(docString);
       }
       break;
     }
@@ -303,6 +316,17 @@ document.addEventListener('keydown', handleKeyDown);
 
 helpText.addEventListener('click', () => {
   showSearchDialog();
+});
+
+mainContainer.addEventListener('click', (event) => {
+  const expandBtn = event.target.closest('.expand-btn');
+  if (expandBtn) {
+    event.stopPropagation();
+    const docString = expandBtn.closest('.doc-string');
+    if (docString) {
+      toggleDocString(docString);
+    }
+  }
 });
 
 searchDialogInput.addEventListener('input', () => {
