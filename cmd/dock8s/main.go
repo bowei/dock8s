@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 
 	dock8s "github.com/bowei/dock8s"
 	"github.com/bowei/dock8s/pkg"
+	"k8s.io/klog/v2"
 )
 
 func main() {
+	klog.InitFlags(nil)
+
 	outputFile := flag.String("output", "-", "output file. '-' will write to stdout")
 	jsonOutput := flag.Bool("json", false, "output JSON instead of HTML")
 	startType := flag.String("type", "k8s.io/api/core/v1.Pod", "initial type to display")
@@ -30,7 +32,7 @@ func main() {
 
 	webFS, err := fs.Sub(dock8s.WebFS, "web")
 	if err != nil {
-		log.Fatalf("Error loading web assets: %v", err)
+		klog.Fatalf("Error loading web assets: %v", err)
 	}
 
 	if *serve {
@@ -53,12 +55,12 @@ func main() {
 		}
 		allTypes, err := pkg.ParsePackages(args)
 		if err != nil {
-			log.Fatalf("Error parsing packages: %v", err)
+			klog.Fatalf("Error parsing packages: %v", err)
 		}
 		if err := pkg.WriteWebsite(allTypes, *generateDir, webFS, *startType); err != nil {
-			log.Fatalf("Error generating website: %v", err)
+			klog.Fatalf("Error generating website: %v", err)
 		}
-		log.Printf("Website written to %s", *generateDir)
+		klog.Infof("Website written to %s", *generateDir)
 		return
 	}
 
@@ -68,14 +70,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Printf("[flag] -output=%q", *outputFile)
-	log.Printf("[flag] -json=%t", *jsonOutput)
-	log.Printf("[flag] -type=%v", *startType)
-	log.Printf("[flag] packages=%v", args)
+	klog.V(2).Infof("[flag] -output=%q", *outputFile)
+	klog.V(2).Infof("[flag] -json=%t", *jsonOutput)
+	klog.V(2).Infof("[flag] -type=%v", *startType)
+	klog.V(2).Infof("[flag] packages=%v", args)
 
 	allTypes, err := pkg.ParsePackages(args)
 	if err != nil {
-		log.Fatalf("Error parsing packages: %v", err)
+		klog.Fatalf("Error parsing packages: %v", err)
 	}
 
 	var writer io.Writer
@@ -84,7 +86,7 @@ func main() {
 	} else {
 		f, err := os.Create(*outputFile)
 		if err != nil {
-			log.Fatalf("Error creating file: %v", err)
+			klog.Fatalf("Error creating file: %v", err)
 		}
 		defer f.Close()
 		writer = f
@@ -92,14 +94,14 @@ func main() {
 
 	if *jsonOutput {
 		if err := pkg.WriteJSON(allTypes, writer); err != nil {
-			log.Fatalf("Error writing JSON: %v", err)
+			klog.Fatalf("Error writing JSON: %v", err)
 		}
 		return
 	}
 
-	log.Printf("Found %d types.\n", len(allTypes))
+	klog.Infof("Found %d types.", len(allTypes))
 
 	if err := pkg.GenerateDataJS(allTypes, writer, *startType); err != nil {
-		log.Fatalf("Error generating HTML: %v", err)
+		klog.Fatalf("Error generating HTML: %v", err)
 	}
 }

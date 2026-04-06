@@ -6,11 +6,12 @@ import (
 	"go/doc"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"k8s.io/klog/v2"
 )
 
 // ParsePackages from the files in the given directories.
@@ -26,14 +27,14 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 		if err != nil {
 			err2 := fmt.Errorf("error getting file path for %s (error was %w). Possible fix: `go get %s`",
 				pkgDir, err, pkgDir)
-			log.Printf("%v", err2)
+			klog.V(2).Infof("%v", err2)
 			errs = append(errs, err2)
 			continue
 		}
 
 		pkgImportPath, err := getPkgPathFromDir(absPath)
 		if err != nil {
-			log.Printf("Skipping directory %s, not a Go package: %v", absPath, err)
+			klog.V(2).Infof("Skipping directory %s, not a Go package: %v", absPath, err)
 			continue
 		}
 
@@ -49,7 +50,7 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 
 		externalPkgs, err := parsePackage(pkgDir, allTypes)
 		if err != nil {
-			log.Printf("Error parsing package %s: %v", pkgDir, err)
+			klog.V(2).Infof("Error parsing package %s: %v", pkgDir, err)
 			continue
 		}
 
@@ -63,7 +64,7 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 				if err != nil {
 					err2 := fmt.Errorf("error getting file path for %s (error was %w). Possible fix: `go get %s`",
 						pkgPath, err, pkgPath)
-					log.Printf("%v", err2)
+					klog.V(2).Infof("%v", err2)
 					errs = append(errs, err2)
 					continue
 				}
@@ -74,9 +75,9 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 	}
 
 	if len(errs) > 0 {
-		log.Printf("Errors:")
+		klog.V(2).Infof("Errors:")
 		for _, e := range errs {
-			log.Printf("- %v", e)
+			klog.V(2).Infof("- %v", e)
 		}
 	}
 
@@ -112,7 +113,7 @@ func skipPackage(pkgPath string) bool {
 // getPkgPathFromDir uses `go list` to find the import path of a package in a directory.
 func getPkgPathFromDir(pkgDir string) (string, error) {
 	args := []string{"list", "-f", "{{.ImportPath}}", "."}
-	log.Printf("getPkgPathFromDir %v", args)
+	klog.V(2).Infof("getPkgPathFromDir %v", args)
 
 	cmd := exec.Command("go", args...)
 	cmd.Dir = pkgDir
@@ -122,7 +123,7 @@ func getPkgPathFromDir(pkgDir string) (string, error) {
 	}
 
 	ret := strings.TrimSpace(string(out))
-	log.Printf("getPkgPathFromDir %v = %q", args, ret)
+	klog.V(2).Infof("getPkgPathFromDir %v = %q", args, ret)
 
 	return ret, nil
 }
@@ -130,7 +131,7 @@ func getPkgPathFromDir(pkgDir string) (string, error) {
 // resolvePkgDir uses `go list` to find the directory of a package.
 func resolvePkgDir(pkgPath string) (string, error) {
 	args := []string{"list", "-f", "{{.Dir}}", pkgPath}
-	log.Printf("resolvePkgDir %v", args)
+	klog.V(2).Infof("resolvePkgDir %v", args)
 
 	cmd := exec.Command("go", args...)
 	out, err := cmd.Output()
@@ -139,7 +140,7 @@ func resolvePkgDir(pkgPath string) (string, error) {
 	}
 
 	ret := strings.TrimSpace(string(out))
-	log.Printf("resolvePkgDir %v = %q", args, ret)
+	klog.V(2).Infof("resolvePkgDir %v = %q", args, ret)
 
 	return ret, nil
 }
@@ -152,7 +153,7 @@ func resolveType(
 	externalPkgs map[string]bool,
 ) (string, []string) {
 	typeName, decorators := resolveTypeRecursive(expr, pkgImportPath, importMap, externalPkgs, 0)
-	log.Printf("resolveType(%q) = %s, %v", pkgImportPath, typeName, decorators)
+	klog.V(2).Infof("resolveType(%q) = %s, %v", pkgImportPath, typeName, decorators)
 	return typeName, decorators
 }
 
@@ -178,42 +179,42 @@ func resolveTypeRecursive(
 ) (string, []string) {
 	switch t := expr.(type) {
 	case *ast.StarExpr:
-		log.Printf("resolving StarExpr (pointer)")
+		klog.V(2).Infof("resolving StarExpr (pointer)")
 		baseType, decorators := resolveTypeRecursive(t.X, pkgImportPath, importMap, externalPkgs, depth+1)
 		return baseType, append(decorators, "Ptr")
 	case *ast.ArrayType:
-		log.Printf("resolving ArrayType (list/slice)")
+		klog.V(2).Infof("resolving ArrayType (list/slice)")
 		baseType, decorators := resolveTypeRecursive(t.Elt, pkgImportPath, importMap, externalPkgs, depth+1)
 		return baseType, append(decorators, "List")
 	case *ast.MapType:
-		log.Printf("resolving MapType")
+		klog.V(2).Infof("resolving MapType")
 		keyType, _ := resolveTypeRecursive(t.Key, pkgImportPath, importMap, externalPkgs, depth+1)
 		valueType, decorators := resolveTypeRecursive(t.Value, pkgImportPath, importMap, externalPkgs, depth+1)
 		return valueType, append(decorators, fmt.Sprintf("Map[%s]", keyType))
 	case *ast.Ident:
 		if t.Obj == nil {
 			if isPrimitive(t.Name) {
-				log.Printf("resolving Ident: built-in type %s", t.Name)
+				klog.V(2).Infof("resolving Ident: built-in type %s", t.Name)
 				return t.Name, nil // Built-in type
 			}
-			log.Printf("resolving Ident: alias of built-in type %s", t.Name)
+			klog.V(2).Infof("resolving Ident: alias of built-in type %s", t.Name)
 			return pkgImportPath + "." + t.Name, nil // Type in the same package
 		}
-		log.Printf("resolving Ident: same-package type %s", t.Name)
+		klog.V(2).Infof("resolving Ident: same-package type %s", t.Name)
 		return pkgImportPath + "." + t.Name, nil // Type in the same package
 	case *ast.SelectorExpr:
 		if x, ok := t.X.(*ast.Ident); ok {
 			pkgName := x.Name
 			if pkgPath, ok := importMap[pkgName]; ok {
 				externalPkgs[pkgPath] = true
-				log.Printf("resolving SelectorExpr: external type %s.%s (from %s)", pkgName, t.Sel.Name, pkgPath)
+				klog.V(2).Infof("resolving SelectorExpr: external type %s.%s (from %s)", pkgName, t.Sel.Name, pkgPath)
 				return pkgPath + "." + t.Sel.Name, nil
 			}
-			log.Printf("resolving SelectorExpr: unknown type %s.%s", pkgName, t.Sel.Name)
+			klog.V(2).Infof("resolving SelectorExpr: unknown type %s.%s", pkgName, t.Sel.Name)
 			return pkgName + "." + t.Sel.Name, nil
 		}
 	}
-	log.Printf("resolving unknown type %T", expr)
+	klog.V(2).Infof("resolving unknown type %T", expr)
 	return "", nil
 }
 
@@ -259,7 +260,7 @@ func processStruct(
 	pkgImportPath string,
 	externalPkgs map[string]bool,
 ) error {
-	log.Printf("processing struct %s", typeInfo.TypeName)
+	klog.V(2).Infof("processing struct %s", typeInfo.TypeName)
 	file := findFileForTypeSpec(typeSpec, files)
 	if file == nil {
 		return fmt.Errorf("file not found for type %s", typeInfo.TypeName)
@@ -274,14 +275,14 @@ func processStruct(
 				for _, name := range field.Names {
 					fieldNamesForLog = append(fieldNamesForLog, name.Name)
 				}
-				log.Printf("processing field(s): %s", strings.Join(fieldNamesForLog, ", "))
+				klog.V(2).Infof("processing field(s): %s", strings.Join(fieldNamesForLog, ", "))
 			} else {
-				log.Printf("processing embedded field")
+				klog.V(2).Infof("processing embedded field")
 			}
 
 			fieldType, decorators := resolveType(field.Type, pkgImportPath, importMap, externalPkgs)
 			if fieldType == "" {
-				log.Printf("skipping field, could not resolve type")
+				klog.V(2).Infof("skipping field, could not resolve type")
 				continue
 			}
 
@@ -304,14 +305,14 @@ func processStruct(
 			if len(field.Names) > 0 {
 				for _, name := range field.Names {
 					if !ast.IsExported(name.Name) {
-						log.Printf("skipping unexported field: %s", name.Name)
+						klog.V(2).Infof("skipping unexported field: %s", name.Name)
 						continue
 					}
-					log.Printf("            found exported field: %s %s", name.Name, fieldType)
+					klog.V(2).Infof("found exported field: %s %s", name.Name, fieldType)
 					typeInfo.Fields = append(typeInfo.Fields, makeFieldInfo(name.Name, fieldType, fieldPkg, decorators, fieldDoc))
 				}
 			} else { // Embedded field
-				log.Printf("found embedded field of type: %s", fieldType)
+				klog.V(2).Infof("found embedded field of type: %s", fieldType)
 				parts := strings.Split(fieldType, ".")
 				fieldName := parts[len(parts)-1]
 				typeInfo.Fields = append(typeInfo.Fields, makeFieldInfo(fieldName, fieldType, fieldPkg, decorators, fieldDoc))
@@ -388,14 +389,14 @@ func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo 
 				if ident, ok := vs.Type.(*ast.Ident); ok && ident.Name == targetTypeName {
 					// Found a constant with explicit type matching our target
 					for _, name := range vs.Names {
-						log.Printf("Looking at %v %s", ident, name.Name)
+						klog.V(2).Infof("Looking at %v %s", ident, name.Name)
 
 						if ast.IsExported(name.Name) {
 							docString := ""
 							if vs.Doc != nil {
 								docString = vs.Doc.Text()
 							}
-							log.Printf("Found exported enum const value with explicit type: %s", name.Name)
+							klog.V(2).Infof("Found exported enum const value with explicit type: %s", name.Name)
 							enumValues = append(enumValues, EnumInfo{
 								Name:            name.Name,
 								DocString:       strings.TrimSpace(docString),
@@ -410,13 +411,13 @@ func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo 
 					if ast.IsExported(name.Name) && i < len(vs.Values) {
 						if callExpr, ok := vs.Values[i].(*ast.CallExpr); ok {
 							if ident, ok := callExpr.Fun.(*ast.Ident); ok && ident.Name == targetTypeName {
-								log.Printf("Looking at %v %s", ident, name.Name)
+								klog.V(2).Infof("Looking at %v %s", ident, name.Name)
 
 								docString := ""
 								if vs.Doc != nil {
 									docString = vs.Doc.Text()
 								}
-								log.Printf("Found exported enum const value with type conversion: %s", name.Name)
+								klog.V(2).Infof("Found exported enum const value with type conversion: %s", name.Name)
 								enumValues = append(enumValues, EnumInfo{
 									Name:            name.Name,
 									DocString:       strings.TrimSpace(docString),
@@ -434,7 +435,7 @@ func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo 
 }
 
 func processEnum(typeInfo *TypeInfo, ident *ast.Ident, docPkg *doc.Package) bool {
-	log.Printf("processEnum %s", typeInfo.TypeName)
+	klog.V(2).Infof("processEnum %s", typeInfo.TypeName)
 
 	validUnderlying := map[string]bool{
 		"string":  true,
@@ -455,17 +456,17 @@ func processEnum(typeInfo *TypeInfo, ident *ast.Ident, docPkg *doc.Package) bool
 		"rune":    true,
 	}
 	if _, ok := validUnderlying[ident.Name]; !ok {
-		log.Printf("type %s is not an enum (base type %s)", typeInfo.TypeName, ident.Name)
+		klog.V(2).Infof("type %s is not an enum (base type %s)", typeInfo.TypeName, ident.Name)
 		return false
 	}
 
 	consts := findConstantsByType(docPkg, typeInfo.TypeName)
 	if len(consts) == 0 {
-		log.Printf("type %s does not have consts or values", typeInfo.TypeName)
+		klog.V(2).Infof("type %s does not have consts or values", typeInfo.TypeName)
 		return false
 	}
 
-	log.Printf("type %s is an enum (base type %s)", typeInfo.TypeName, ident.Name)
+	klog.V(2).Infof("type %s is an enum (base type %s)", typeInfo.TypeName, ident.Name)
 	typeInfo.EnumValues = append(typeInfo.EnumValues, consts...)
 
 	return true
@@ -496,10 +497,10 @@ func parseGoFiles(pkgDir string) ([]*ast.File, *token.FileSet, error) {
 func parsePackage(pkgDir string, allTypes map[string]TypeInfo) (map[string]bool, error) {
 	pkgImportPath, err := getPkgPathFromDir(pkgDir)
 	if err != nil {
-		log.Printf("Skipping directory %s, not a Go package: %v", pkgDir, err)
+		klog.V(2).Infof("Skipping directory %s, not a Go package: %v", pkgDir, err)
 		return nil, nil
 	}
-	log.Printf("parsing package: %s", pkgImportPath)
+	klog.V(2).Infof("parsing package: %s", pkgImportPath)
 
 	files, fset, err := parseGoFiles(pkgDir)
 	if err != nil {
@@ -512,7 +513,7 @@ func parsePackage(pkgDir string, allTypes map[string]TypeInfo) (map[string]bool,
 		return externalPkgs, nil
 	}
 
-	log.Printf("processing package AST: %s", files[0].Name.Name)
+	klog.V(2).Infof("processing package AST: %s", files[0].Name.Name)
 	docPkg, err := doc.NewFromFiles(fset, files, pkgImportPath)
 	if err != nil {
 		return nil, err
@@ -540,7 +541,7 @@ func processType(
 	externalPkgs map[string]bool,
 	docPkg *doc.Package,
 ) {
-	log.Printf("found type: %s", t.Name)
+	klog.V(2).Infof("found type: %s", t.Name)
 	typeSpec, ok := t.Decl.Specs[0].(*ast.TypeSpec)
 	if !ok {
 		return
@@ -548,13 +549,13 @@ func processType(
 
 	typeName := typeSpec.Name.Name
 	if !ast.IsExported(typeName) {
-		log.Printf("skipping unexported type: %s", typeName)
+		klog.V(2).Infof("skipping unexported type: %s", typeName)
 		return
 	}
 
 	qualifiedTypeName := pkgImportPath + "." + typeName
 	if _, exists := allTypes[qualifiedTypeName]; exists {
-		log.Printf("skipping already processed type: %s", qualifiedTypeName)
+		klog.V(2).Infof("skipping already processed type: %s", qualifiedTypeName)
 		return
 	}
 
@@ -571,23 +572,23 @@ func processType(
 
 	switch spec := typeSpec.Type.(type) {
 	case *ast.StructType:
-		log.Printf("type %s is a struct", qualifiedTypeName)
+		klog.V(2).Infof("type %s is a struct", qualifiedTypeName)
 		if err := processStruct(&typeInfo, typeSpec, spec, files, pkgImportPath, externalPkgs); err != nil {
-			log.Printf("Error processing struct %s: %v", qualifiedTypeName, err)
+			klog.V(2).Infof("Error processing struct %s: %v", qualifiedTypeName, err)
 			return
 		}
 		isProcessed = true
 	case *ast.Ident:
-		log.Printf("type %s is an ident, checking for enum", qualifiedTypeName)
+		klog.V(2).Infof("type %s is an ident, checking for enum", qualifiedTypeName)
 		if processEnum(&typeInfo, spec, docPkg) {
 			isProcessed = true
 		}
 	}
 
 	if isProcessed {
-		log.Printf("successfully processed type: %s", qualifiedTypeName)
+		klog.V(2).Infof("successfully processed type: %s", qualifiedTypeName)
 		allTypes[qualifiedTypeName] = typeInfo
 	} else {
-		log.Printf("type %s was not processed (not a struct or enum)", qualifiedTypeName)
+		klog.V(2).Infof("type %s was not processed (not a struct or enum)", qualifiedTypeName)
 	}
 }

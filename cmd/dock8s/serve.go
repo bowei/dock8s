@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bowei/dock8s/pkg"
+	"k8s.io/klog/v2"
 )
 
 // reloadBroker fans out reload notifications to SSE clients.
@@ -67,31 +67,31 @@ func runServe(srcDirs []string, webFS fs.FS) {
 		for _, srcDir := range srcDirs {
 			abs, err := filepath.Abs(srcDir)
 			if err != nil {
-				log.Printf("Error resolving path %q: %v", srcDir, err)
+				klog.V(2).Infof("Error resolving path %q: %v", srcDir, err)
 				return
 			}
 			absDirs = append(absDirs, abs)
 		}
 		types, err := pkg.ParsePackages(absDirs)
 		if err != nil {
-			log.Printf("Error parsing packages: %v", err)
+			klog.V(2).Infof("Error parsing packages: %v", err)
 			return
 		}
 		startType := pkg.AutoStartType(types)
 
 		var jsBuf bytes.Buffer
 		if err := pkg.GenerateDataJS(types, &jsBuf, startType); err != nil {
-			log.Printf("Error generating data.js: %v", err)
+			klog.V(2).Infof("Error generating data.js: %v", err)
 			return
 		}
 		typesJSON, err := json.Marshal(types)
 		if err != nil {
-			log.Printf("Error marshaling types: %v", err)
+			klog.V(2).Infof("Error marshaling types: %v", err)
 			return
 		}
 		jsonBytes, err := json.Marshal(liveData{Types: json.RawMessage(typesJSON), StartType: startType})
 		if err != nil {
-			log.Printf("Error marshaling data.json: %v", err)
+			klog.V(2).Infof("Error marshaling data.json: %v", err)
 			return
 		}
 
@@ -100,7 +100,7 @@ func runServe(srcDirs []string, webFS fs.FS) {
 		dataJSON = jsonBytes
 		mu.Unlock()
 
-		log.Printf("Regenerated data.js (%d bytes, %d types)", jsBuf.Len(), len(types))
+		klog.V(2).Infof("Regenerated data.js (%d bytes, %d types)", jsBuf.Len(), len(types))
 		broker.notify()
 	}
 
@@ -113,7 +113,7 @@ func runServe(srcDirs []string, webFS fs.FS) {
 			t := latestGoMtimeAll(srcDirs)
 			if t.After(lastMtime) {
 				lastMtime = t
-				log.Printf("Changes detected, regenerating...")
+				klog.Infof("Changes detected, regenerating...")
 				reparse()
 			}
 		}
@@ -160,9 +160,9 @@ func runServe(srcDirs []string, webFS fs.FS) {
 	mux.Handle("/", http.FileServer(http.FS(webFS)))
 
 	addr := "localhost:8080"
-	log.Printf("Serving on http://%s", addr)
+	klog.Infof("Serving on http://%s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatalf("Server error: %v", err)
+		klog.Fatalf("Server error: %v", err)
 	}
 }
 
