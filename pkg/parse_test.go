@@ -1356,3 +1356,172 @@ type Pkg2Struct struct {
 		t.Errorf("Expected field type %s, got %s", expectedTypeName, field.TypeName)
 	}
 }
+
+func TestFileImportsObjectMeta(t *testing.T) {
+	dir, err := os.MkdirTemp("", "fileimports")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	withMeta := filepath.Join(dir, "with_meta.go")
+	err = os.WriteFile(withMeta, []byte(`package p
+import "k8s.io/apimachinery/pkg/apis/meta/v1"
+var _ = v1.ObjectMeta{}
+`), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	withoutMeta := filepath.Join(dir, "without_meta.go")
+	err = os.WriteFile(withoutMeta, []byte(`package p
+import "fmt"
+var _ = fmt.Sprintf
+`), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !fileImportsObjectMeta(withMeta) {
+		t.Error("expected true for file importing meta/v1")
+	}
+	if fileImportsObjectMeta(withoutMeta) {
+		t.Error("expected false for file not importing meta/v1")
+	}
+	if fileImportsObjectMeta("/nonexistent/path/file.go") {
+		t.Error("expected false for non-existent file")
+	}
+}
+
+func TestHasObjectMetaImport(t *testing.T) {
+	dir, err := os.MkdirTemp("", "hasobjmeta")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// A test file importing meta — should be ignored.
+	err = os.WriteFile(filepath.Join(dir, "meta_test.go"), []byte(`package p
+import "k8s.io/apimachinery/pkg/apis/meta/v1"
+var _ = v1.ObjectMeta{}
+`), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// No non-test .go files yet → should return false.
+	if hasObjectMetaImport(dir) {
+		t.Error("expected false when only test file imports meta/v1")
+	}
+
+	// Add a non-test file without the import.
+	err = os.WriteFile(filepath.Join(dir, "other.go"), []byte(`package p`), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasObjectMetaImport(dir) {
+		t.Error("expected false when non-test file does not import meta/v1")
+	}
+
+	// Add a non-test file with the import.
+	err = os.WriteFile(filepath.Join(dir, "types.go"), []byte(`package p
+import "k8s.io/apimachinery/pkg/apis/meta/v1"
+var _ = v1.ObjectMeta{}
+`), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasObjectMetaImport(dir) {
+		t.Error("expected true when non-test file imports meta/v1")
+	}
+
+	// Non-existent directory should return false, not panic.
+	if hasObjectMetaImport("/nonexistent/path") {
+		t.Error("expected false for non-existent directory")
+	}
+}
+
+func TestFindAPIPackageDirs(t *testing.T) {
+	root, err := os.MkdirTemp("", "findapidirs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(root)
+
+	metaSrc := `package p
+import "k8s.io/apimachinery/pkg/apis/meta/v1"
+var _ = v1.ObjectMeta{}
+`
+
+	// No subdirectory has meta import yet → should fall back to []string{root}.
+	got, err := findAPIPackageDirs(root)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0] != root {
+		t.Errorf("expected fallback to [root], got %v", got)
+	}
+
+	// Add a subdir with the meta import.
+	subA := filepath.Join(root, "a")
+	if err := os.Mkdir(subA, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(subA, "types.go"), []byte(metaSrc), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err = findAPIPackageDirs(root)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0] != subA {
+		t.Errorf("expected [subA], got %v", got)
+	}
+
+	// Add a second subdir with the meta import.
+	subB := filepath.Join(root, "b")
+	if err := os.Mkdir(subB, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(subB, "types.go"), []byte(metaSrc), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err = findAPIPackageDirs(root)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("expected 2 dirs, got %v", got)
+	}
+
+	// Hidden subdirectory should be skipped.
+	hidden := filepath.Join(root, ".hidden")
+	if err := os.Mkdir(hidden, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(hidden, "types.go"), []byte(metaSrc), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err = findAPIPackageDirs(root)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, d := range got {
+		if d == hidden {
+			t.Errorf("hidden directory %s should have been skipped", hidden)
+		}
+	}
+	if len(got) != 2 {
+		t.Errorf("expected 2 dirs (hidden skipped), got %v", got)
+	}
+}
+
+func TestFindAPIPackageDirs_NonExistent(t *testing.T) {
+	_, err := findAPIPackageDirs("/nonexistent/path/that/does/not/exist")
+	if err == nil {
+		t.Error("expected error for non-existent root directory")
+	}
+}

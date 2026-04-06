@@ -6,6 +6,7 @@ import (
 	"go/doc"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,15 +33,23 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 			continue
 		}
 
-		pkgImportPath, err := getPkgPathFromDir(absPath)
+		apiDirs, err := findAPIPackageDirs(absPath)
 		if err != nil {
-			klog.V(2).Infof("Skipping directory %s, not a Go package: %v", absPath, err)
-			continue
+			klog.V(2).Infof("Error scanning %s for API packages: %v", absPath, err)
+			apiDirs = []string{absPath}
 		}
 
-		if _, parsed := parsedPkgs[pkgImportPath]; !parsed {
-			queue = append(queue, absPath)
-			parsedPkgs[pkgImportPath] = true
+		for _, dir := range apiDirs {
+			pkgImportPath, err := getPkgPathFromDir(dir)
+			if err != nil {
+				klog.V(2).Infof("Skipping directory %s, not a Go package: %v", dir, err)
+				continue
+			}
+
+			if _, parsed := parsedPkgs[pkgImportPath]; !parsed {
+				queue = append(queue, dir)
+				parsedPkgs[pkgImportPath] = true
+			}
 		}
 	}
 
@@ -82,6 +91,72 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 	}
 
 	return allTypes, nil
+}
+
+// findAPIPackageDirs recursively scans rootDir and returns all subdirectories
+// (including rootDir itself) that contain Go files importing the Kubernetes
+// meta/v1 ObjectMeta package. If no such directories are found, returns
+// []string{rootDir} so the caller falls back to the original behavior.
+func findAPIPackageDirs(rootDir string) ([]string, error) {
+	var result []string
+	err := filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		// Skip hidden directories.
+		if d.Name() != "." && strings.HasPrefix(d.Name(), ".") {
+			return filepath.SkipDir
+		}
+		if hasObjectMetaImport(path) {
+			result = append(result, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(result) == 0 {
+		return []string{rootDir}, nil
+	}
+	return result, nil
+}
+
+// hasObjectMetaImport returns true if any non-test .go file in dir imports
+// k8s.io/apimachinery/pkg/apis/meta/v1.
+func hasObjectMetaImport(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		if fileImportsObjectMeta(filepath.Join(dir, name)) {
+			return true
+		}
+	}
+	return false
+}
+
+// fileImportsObjectMeta returns true if the Go source file at filePath imports
+// k8s.io/apimachinery/pkg/apis/meta/v1. Uses parser.ImportsOnly for speed.
+func fileImportsObjectMeta(filePath string) bool {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, filePath, nil, parser.ImportsOnly)
+	if err != nil {
+		return false
+	}
+	for _, imp := range f.Imports {
+		if imp.Path.Value == `"k8s.io/apimachinery/pkg/apis/meta/v1"` {
+			return true
+		}
+	}
+	return false
 }
 
 func skipPackage(pkgPath string) bool {
