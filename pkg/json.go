@@ -14,6 +14,7 @@ type TypeInfo struct {
 	Fields     []FieldInfo `json:"fields"`
 	EnumValues []EnumInfo  `json:"enumValues"`
 	IsRoot     bool        `json:"isRoot"`
+	IsTopLevel bool        `json:"isTopLevel"`
 
 	DocString       string      `json:"docString"`
 	ParsedDocString GoDocString `json:"parsedDocString"`

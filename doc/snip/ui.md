@@ -71,10 +71,11 @@ Press `/` (or click the help text in the top bar) to open the search dialog.
 See [search.md](search.md) for full details. In summary:
 
 - **Type search** (default): filter root types by name; selecting one opens it
-  as the first column.
+  as the first column. By default only types from the source directories are
+  shown; checking **Include dependency APIs** reveals all root types.
 - **Field search** (`f:` prefix): search field names across all types reachable
   from root types; selecting a result restores the full column path to that
-  field.
+  field. Respects the same source-directory filter as type search.
 
 ## Themes
 

@@ -7,8 +7,9 @@
 
 ## Dialog behavior
 
-- Opens an overlay with a text input, a status line, and a scrollable results list
-- The input is auto-focused on open
+- Opens an overlay with a text input, an **Include dependency APIs** checkbox, a status
+  line, and a scrollable results list
+- The input is auto-focused on open; the checkbox resets to unchecked on each open
 - Pressing `Escape` or clicking outside the dialog closes it and clears the input and status
 
 ## Search modes
@@ -20,6 +21,10 @@ The mode is determined by the prefix of the input value.
 With no prefix, the dialog searches root types — types that have `TypeMeta`+`ObjectMeta`
 (i.e. top-level Kubernetes resources), or whose names end in `Request`/`Response`.
 
+By default only types from the source directories passed to `-serve` or `-generate`
+(and their subdirectories) are shown. Checking **Include dependency APIs** in the dialog
+shows all root types, including those pulled in as transitive dependencies.
+
 - Filters by case-insensitive substring match against the fully-qualified type name
 - Results are sorted alphabetically by short name (the part after the last `.`), with the
   full qualified name as a tiebreaker
@@ -29,7 +34,9 @@ With no prefix, the dialog searches root types — types that have `TypeMeta`+`O
 ### Field search (`f:` prefix)
 
 Typing `f:` followed by a filter string searches field names across all types reachable
-from any root type via field references. Non-reachable (orphan) types are excluded.
+from any root type via field references. Non-reachable (orphan) types are excluded. The
+same **Include dependency APIs** checkbox controls whether the search starts only from
+source-directory root types or from all root types.
 
 - Filters field names by case-insensitive substring match
 - Each result represents a specific path from a root type down to the matching field

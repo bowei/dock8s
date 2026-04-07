@@ -19,6 +19,7 @@ import (
 func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 	allTypes := make(map[string]TypeInfo)
 	parsedPkgs := make(map[string]bool)
+	topLevelPkgs := make(map[string]bool)
 
 	var errs []error
 	queue := []string{}
@@ -46,6 +47,7 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 				continue
 			}
 
+			topLevelPkgs[pkgImportPath] = true
 			if _, parsed := parsedPkgs[pkgImportPath]; !parsed {
 				queue = append(queue, dir)
 				parsedPkgs[pkgImportPath] = true
@@ -87,6 +89,13 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 		klog.V(2).Infof("Errors:")
 		for _, e := range errs {
 			klog.V(2).Infof("- %v", e)
+		}
+	}
+
+	for name, ti := range allTypes {
+		if topLevelPkgs[ti.Package] {
+			ti.IsTopLevel = true
+			allTypes[name] = ti
 		}
 	}
 

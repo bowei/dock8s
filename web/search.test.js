@@ -4,17 +4,17 @@
 import { populateSearchDialogList, buildReachableTypes, findFieldPaths, populateFieldSearchList, FIELD_SEARCH_LIMIT } from './search.js';
 
 const typeData = {
-  'example.io/v1.Pod': { typeName: 'Pod', package: 'example.io/v1', isRoot: true },
-  'example.io/v1.PodSpec': { typeName: 'PodSpec', package: 'example.io/v1', isRoot: false },
-  'example.io/v1.Node': { typeName: 'Node', package: 'example.io/v1', isRoot: true },
-  'example.io/v1.Namespace': { typeName: 'Namespace', package: 'example.io/v1', isRoot: true },
-  'other.io/v1.Pod': { typeName: 'Pod', package: 'other.io/v1', isRoot: true },
+  'example.io/v1.Pod': { typeName: 'Pod', package: 'example.io/v1', isRoot: true, isTopLevel: true },
+  'example.io/v1.PodSpec': { typeName: 'PodSpec', package: 'example.io/v1', isRoot: false, isTopLevel: true },
+  'example.io/v1.Node': { typeName: 'Node', package: 'example.io/v1', isRoot: true, isTopLevel: true },
+  'example.io/v1.Namespace': { typeName: 'Namespace', package: 'example.io/v1', isRoot: true, isTopLevel: true },
+  'other.io/v1.Pod': { typeName: 'Pod', package: 'other.io/v1', isRoot: true, isTopLevel: false },
 };
 
 // typeData for field search tests: a graph with one reachable branch and one orphan.
 const fieldTypeData = {
   'example.io/v1.Pod': {
-    typeName: 'Pod', package: 'example.io/v1', isRoot: true,
+    typeName: 'Pod', package: 'example.io/v1', isRoot: true, isTopLevel: true,
     fields: [
       { fieldName: 'spec', typeName: 'example.io/v1.PodSpec' },
       { fieldName: 'status', typeName: 'example.io/v1.PodStatus' },
@@ -54,9 +54,9 @@ function makeList() {
 }
 
 describe('populateSearchDialogList', () => {
-  it('only includes root types', () => {
+  it('only includes root types (topLevelOnly=false)', () => {
     const list = makeList();
-    populateSearchDialogList('', typeData, list);
+    populateSearchDialogList('', typeData, list, false);
     const items = list.querySelectorAll('li');
     // PodSpec is not root, so 4 items
     expect(items.length).toBe(4);
@@ -64,9 +64,20 @@ describe('populateSearchDialogList', () => {
     expect(typeNames).not.toContain('example.io/v1.PodSpec');
   });
 
-  it('filters by substring (case-insensitive)', () => {
+  it('only includes top-level root types by default', () => {
     const list = makeList();
-    populateSearchDialogList('pod', typeData, list);
+    populateSearchDialogList('', typeData, list);
+    const items = list.querySelectorAll('li');
+    // other.io/v1.Pod is root but not top-level, so 3 items
+    expect(items.length).toBe(3);
+    const typeNames = Array.from(items).map(li => li.dataset.typeName);
+    expect(typeNames).not.toContain('other.io/v1.Pod');
+    expect(typeNames).not.toContain('example.io/v1.PodSpec');
+  });
+
+  it('includes dependency root types when topLevelOnly=false', () => {
+    const list = makeList();
+    populateSearchDialogList('pod', typeData, list, false);
     const items = list.querySelectorAll('li');
     expect(items.length).toBe(2);
     const typeNames = Array.from(items).map(li => li.dataset.typeName);
@@ -74,10 +85,19 @@ describe('populateSearchDialogList', () => {
     expect(typeNames).toContain('other.io/v1.Pod');
   });
 
+  it('filters by substring (case-insensitive)', () => {
+    const list = makeList();
+    populateSearchDialogList('pod', typeData, list);
+    const items = list.querySelectorAll('li');
+    // only example.io/v1.Pod is top-level
+    expect(items.length).toBe(1);
+    expect(items[0].dataset.typeName).toBe('example.io/v1.Pod');
+  });
+
   it('filters case-insensitively', () => {
     const list = makeList();
     populateSearchDialogList('POD', typeData, list);
-    expect(list.querySelectorAll('li').length).toBe(2);
+    expect(list.querySelectorAll('li').length).toBe(1);
   });
 
   it('returns empty list when no match', () => {
@@ -88,7 +108,7 @@ describe('populateSearchDialogList', () => {
 
   it('sorts by short type name', () => {
     const list = makeList();
-    populateSearchDialogList('', typeData, list);
+    populateSearchDialogList('', typeData, list, false);
     const typeNames = Array.from(list.querySelectorAll('li')).map(li => li.dataset.typeName);
     // Short names: Namespace, Node, Pod, Pod — sorted alphabetically by short name
     expect(typeNames[0]).toBe('example.io/v1.Namespace');
@@ -100,7 +120,7 @@ describe('populateSearchDialogList', () => {
 
   it('marks the first item as selected', () => {
     const list = makeList();
-    populateSearchDialogList('', typeData, list);
+    populateSearchDialogList('', typeData, list, false);
     expect(list.firstChild.classList.contains('selected')).toBe(true);
     const others = Array.from(list.querySelectorAll('li')).slice(1);
     others.forEach(li => expect(li.classList.contains('selected')).toBe(false));
@@ -116,9 +136,9 @@ describe('populateSearchDialogList', () => {
 
   it('clears previous results on each call', () => {
     const list = makeList();
-    populateSearchDialogList('pod', typeData, list);
+    populateSearchDialogList('pod', typeData, list, false);
     expect(list.querySelectorAll('li').length).toBe(2);
-    populateSearchDialogList('node', typeData, list);
+    populateSearchDialogList('node', typeData, list, false);
     expect(list.querySelectorAll('li').length).toBe(1);
   });
 });
@@ -186,7 +206,7 @@ describe('findFieldPaths', () => {
   it('does not follow cycles', () => {
     const cyclicData = {
       'example.io/v1.Root': {
-        typeName: 'Root', package: 'example.io/v1', isRoot: true,
+        typeName: 'Root', package: 'example.io/v1', isRoot: true, isTopLevel: true,
         fields: [{ fieldName: 'self', typeName: 'example.io/v1.Root' }],
       },
     };
@@ -199,7 +219,7 @@ describe('findFieldPaths', () => {
   it('stops collecting after FIELD_SEARCH_LIMIT results', () => {
     const bigData = {
       'example.io/v1.Root': {
-        typeName: 'Root', package: 'example.io/v1', isRoot: true,
+        typeName: 'Root', package: 'example.io/v1', isRoot: true, isTopLevel: true,
         fields: Array.from({ length: 51 }, (_, i) => ({ fieldName: `field${i}`, typeName: 'string' })),
       },
     };
@@ -209,7 +229,7 @@ describe('findFieldPaths', () => {
 
   it('respects MAX_FIELD_SEARCH_DEPTH by not descending beyond 10 levels', () => {
     // Build a chain of 12 types: Root -> T1 -> T2 -> ... -> T11, each with a 'deep' field.
-    const deepData = { 'example.io/v1.Root': { typeName: 'Root', package: 'example.io/v1', isRoot: true, fields: [] } };
+    const deepData = { 'example.io/v1.Root': { typeName: 'Root', package: 'example.io/v1', isRoot: true, isTopLevel: true, fields: [] } };
     let prev = 'example.io/v1.Root';
     for (let i = 1; i <= 11; i++) {
       const name = `example.io/v1.T${i}`;
@@ -225,11 +245,43 @@ describe('findFieldPaths', () => {
     expect(results.length).toBe(0);
   });
 
+  it('excludes non-top-level roots when topLevelOnly=true (default)', () => {
+    const mixedData = {
+      'example.io/v1.Pod': {
+        typeName: 'Pod', package: 'example.io/v1', isRoot: true, isTopLevel: true,
+        fields: [{ fieldName: 'spec', typeName: 'string' }],
+      },
+      'dep.io/v1.DepType': {
+        typeName: 'DepType', package: 'dep.io/v1', isRoot: true, isTopLevel: false,
+        fields: [{ fieldName: 'spec', typeName: 'string' }],
+      },
+    };
+    const results = findFieldPaths('spec', mixedData);
+    expect(results.every(r => r.rootTypeName === 'example.io/v1.Pod')).toBe(true);
+  });
+
+  it('includes non-top-level roots when topLevelOnly=false', () => {
+    const mixedData = {
+      'example.io/v1.Pod': {
+        typeName: 'Pod', package: 'example.io/v1', isRoot: true, isTopLevel: true,
+        fields: [{ fieldName: 'spec', typeName: 'string' }],
+      },
+      'dep.io/v1.DepType': {
+        typeName: 'DepType', package: 'dep.io/v1', isRoot: true, isTopLevel: false,
+        fields: [{ fieldName: 'spec', typeName: 'string' }],
+      },
+    };
+    const results = findFieldPaths('spec', mixedData, false);
+    const roots = results.map(r => r.rootTypeName);
+    expect(roots).toContain('example.io/v1.Pod');
+    expect(roots).toContain('dep.io/v1.DepType');
+  });
+
   it('same root appears multiple times for different paths to matching field', () => {
     // Pod has two paths to a field named 'name': via spec/containers/name and via containers/name
     const multiPathData = {
       'example.io/v1.Pod': {
-        typeName: 'Pod', package: 'example.io/v1', isRoot: true,
+        typeName: 'Pod', package: 'example.io/v1', isRoot: true, isTopLevel: true,
         fields: [
           { fieldName: 'spec', typeName: 'example.io/v1.PodSpec' },
           { fieldName: 'containers', typeName: 'example.io/v1.Container' },
@@ -323,7 +375,7 @@ describe('populateFieldSearchList', () => {
   it('returns truncated:true and caps list at FIELD_SEARCH_LIMIT when results hit the limit', () => {
     const bigData = {
       'example.io/v1.Root': {
-        typeName: 'Root', package: 'example.io/v1', isRoot: true,
+        typeName: 'Root', package: 'example.io/v1', isRoot: true, isTopLevel: true,
         fields: Array.from({ length: 51 }, (_, i) => ({ fieldName: `field${i}`, typeName: 'string' })),
       },
     };

@@ -10,6 +10,7 @@ const searchDialogDialog = document.getElementById('search-dialog-dialog');
 const searchDialogInput = document.getElementById('search-dialog-input');
 const searchDialogList = document.getElementById('search-dialog-list');
 const searchDialogStatus = document.getElementById('search-dialog-status');
+const searchShowAll = document.getElementById('search-show-all');
 const helpDialogOverlay = document.getElementById('help-dialog-overlay');
 const helpDialogDialog = document.getElementById('help-dialog-dialog');
 const helpText = document.getElementById('help-text');
@@ -71,9 +72,22 @@ function updateHash() {
   }
 }
 
+function repopulateSearch() {
+  const value = searchDialogInput.value;
+  const topLevelOnly = !searchShowAll.checked;
+  if (value.startsWith('f:')) {
+    const { truncated } = populateFieldSearchList(value.slice(2).trim(), typeData, searchDialogList, topLevelOnly);
+    searchDialogStatus.textContent = truncated ? `Showing top ${FIELD_SEARCH_LIMIT} results — refine your search` : '';
+  } else {
+    populateSearchDialogList(value, typeData, searchDialogList, topLevelOnly);
+    searchDialogStatus.textContent = '';
+  }
+}
+
 function showSearchDialog() {
   console.log('Showing search dialog');
-  populateSearchDialogList('', typeData, searchDialogList);
+  searchShowAll.checked = false;
+  repopulateSearch();
   searchDialogOverlay.style.display = 'flex';
   searchDialogInput.focus();
 }
@@ -320,16 +334,8 @@ mainContainer.addEventListener('click', (event) => {
   }
 });
 
-searchDialogInput.addEventListener('input', () => {
-  const value = searchDialogInput.value;
-  if (value.startsWith('f:')) {
-    const { truncated } = populateFieldSearchList(value.slice(2).trim(), typeData, searchDialogList);
-    searchDialogStatus.textContent = truncated ? `Showing top ${FIELD_SEARCH_LIMIT} results — refine your search` : '';
-  } else {
-    populateSearchDialogList(value, typeData, searchDialogList);
-    searchDialogStatus.textContent = '';
-  }
-});
+searchDialogInput.addEventListener('input', repopulateSearch);
+searchShowAll.addEventListener('change', repopulateSearch);
 
 searchDialogInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
