@@ -245,7 +245,7 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>API Reference Documentation</title>
+<title>API Reference</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -300,7 +300,7 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1>API Reference Documentation</h1>
+<h1>API Reference</h1>
 <div class="grid">
 {{- range .}}
   <div class="card">
