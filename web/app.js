@@ -86,7 +86,6 @@ function repopulateSearch() {
 
 function showSearchDialog() {
   console.log('Showing search dialog');
-  searchShowAll.checked = false;
   repopulateSearch();
   searchDialogOverlay.style.display = 'flex';
   searchDialogInput.focus();

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(make test:*)",
-      "Bash(make test-js:*)"
+      "Bash(make test-js:*)",
+      "Bash(python3 -c ':*)"
     ]
   }
 }
