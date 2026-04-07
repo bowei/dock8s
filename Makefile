@@ -1,4 +1,5 @@
 EXEC := dock8s
+DOCSITE_EXEC := docsite
 THEME_FILES := $(wildcard web/theme-*.less)
 CSS_FILES := $(THEME_FILES:less=css)
 
@@ -11,17 +12,22 @@ check-setup:
 	@hack/check-setup.sh
 
 .PHONY: build
-build: themes $(EXEC)
+build: themes $(EXEC) $(DOCSITE_EXEC)
 
 .PHONY: $(EXEC)
 $(EXEC):
 	@echo "[BUILD] $@"
 	go build -o $(EXEC) ./cmd/dock8s
 
+.PHONY: $(DOCSITE_EXEC)
+$(DOCSITE_EXEC):
+	@echo "[BUILD] $@"
+	go build -o $(DOCSITE_EXEC) ./cmd/docsite
+
 .PHONY: test
 test:
 	@echo "[TEST]"
-	go test ./pkg/...
+	go test ./pkg/... ./cmd/...
 
 .PHONY: themes
 themes: $(CSS_FILES)
@@ -36,7 +42,7 @@ web/theme-%.css: web/theme-%.less web/app.less
 .PHONY: clean
 clean: clean-themes
 	@echo "[CLEAN]"
-	rm -f $(EXEC)
+	rm -f $(EXEC) $(DOCSITE_EXEC)
 
 .PHONY: clean-themes
 clean-themes:
