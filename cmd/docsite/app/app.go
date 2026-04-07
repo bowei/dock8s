@@ -346,7 +346,7 @@ func GenerateIndex(outDir string, repos []RepoEntry) error {
 		for _, ref := range r.Meta.Refs {
 			refs = append(refs, indexRef{
 				Label: ref,
-				Href:  relPath + "@" + ref + "/index.html",
+				Href:  relPath + "@" + ref + "/",
 			})
 		}
 		entries = append(entries, indexEntry{

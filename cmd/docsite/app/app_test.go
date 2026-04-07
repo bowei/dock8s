@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -215,6 +216,49 @@ func TestLoadRepos(t *testing.T) {
 			t.Fatal("expected error for missing repos dir, got nil")
 		}
 	})
+}
+
+func TestGenerateIndex(t *testing.T) {
+	outDir := t.TempDir()
+	repos := []RepoEntry{
+		{
+			URL:  "https://k8s.io/api",
+			Meta: RepoMeta{Refs: []string{"main", "v0.28.0"}},
+		},
+		{
+			URL:  "https://github.com/foo/bar",
+			Meta: RepoMeta{Refs: []string{"v1.0.0"}},
+		},
+	}
+	if err := GenerateIndex(outDir, repos); err != nil {
+		t.Fatalf("GenerateIndex() error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(outDir, "index.html"))
+	if err != nil {
+		t.Fatalf("reading index.html: %v", err)
+	}
+	html := string(data)
+
+	wantHrefs := []string{
+		`href="k8s.io/api@main/"`,
+		`href="k8s.io/api@v0.28.0/"`,
+		`href="github.com/foo/bar@v1.0.0/"`,
+	}
+	for _, want := range wantHrefs {
+		if !strings.Contains(html, want) {
+			t.Errorf("index.html missing %q", want)
+		}
+	}
+
+	badHrefs := []string{
+		"index.html",
+	}
+	for _, bad := range badHrefs {
+		if strings.Contains(html, bad) {
+			t.Errorf("index.html should not contain %q", bad)
+		}
+	}
 }
 
 func TestCheckoutRepo_CacheHit(t *testing.T) {

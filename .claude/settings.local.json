@@ -3,7 +3,10 @@
     "allow": [
       "Bash(make test:*)",
       "Bash(make test-js:*)",
-      "Bash(python3 -c ':*)"
+      "Bash(python3 -c ':*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(make build:*)"
     ]
   }
 }
