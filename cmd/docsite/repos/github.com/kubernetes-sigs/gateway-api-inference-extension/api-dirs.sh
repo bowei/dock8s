@@ -1,3 +1,4 @@
 #!/bin/bash
 
-echo "apis"
+echo "api"
+echo "apix"

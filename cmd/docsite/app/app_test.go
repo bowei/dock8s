@@ -163,8 +163,8 @@ func TestLoadRepos(t *testing.T) {
 
 	t.Run("multiple repos under same domain", func(t *testing.T) {
 		root := makeReposDir(t, map[string]string{
-			"k8s.io/api":             "refs:\n  - main\n",
-			"k8s.io/apimachinery":    "refs:\n  - main\n  - v0.28.0\n",
+			"k8s.io/api":          "refs:\n  - main\n",
+			"k8s.io/apimachinery": "refs:\n  - main\n  - v0.28.0\n",
 		})
 		repos, err := LoadRepos(Config{ReposDir: root})
 		if err != nil {
@@ -186,8 +186,8 @@ func TestLoadRepos(t *testing.T) {
 
 	t.Run("repos under different domains", func(t *testing.T) {
 		root := makeReposDir(t, map[string]string{
-			"k8s.io/api":          "refs:\n  - main\n",
-			"github.com/foo/bar":  "refs:\n  - v1.0.0\n",
+			"k8s.io/api":         "refs:\n  - main\n",
+			"github.com/foo/bar": "refs:\n  - v1.0.0\n",
 		})
 		repos, err := LoadRepos(Config{ReposDir: root})
 		if err != nil {
