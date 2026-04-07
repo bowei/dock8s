@@ -1,76 +1,60 @@
-package main
-
-// USAGE
-//
-// Generate dock8s documentation for each repo described in /repos:
-//
-//	go run hack/docsite/gen-docsite.go -repos hack/docsite/repos -out ./docsite
+package app
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-// repoEntry represent a repo to generate documentation for.
+// Config holds the configuration for the docsite generator.
+type Config struct {
+	ReposDir string
+	OutDir   string
+	CacheDir string
+	Dock8sBin string
+}
+
+// RepoEntry represents a repo to generate documentation for.
 //
 // The repo entries data is stored in a directory structure:
 //
 //	./repos/<domain>/<path>
-type repoEntry struct {
-	// url is the full HTTPS URL of the repo, e.g. "https://k8s.io/api".
-	url string
+type RepoEntry struct {
+	// URL is the full HTTPS URL of the repo, e.g. "https://k8s.io/api".
+	URL string
 
-	// meta is the file "metadata.yaml"
-	meta repoMeta
+	// Meta is the file "metadata.yaml"
+	Meta RepoMeta
 }
 
-// repoMeta is repos/<path...>/metadata.yaml
-type repoMeta struct {
-	// References are the branches and tags to generate
-	// documentation for.
+// RepoMeta is repos/<path...>/metadata.yaml
+type RepoMeta struct {
+	// Refs are the branches and tags to generate documentation for.
 	Refs []string
 }
 
-// cachePath returns the local cache directory for this repo under cacheDir.
+// CachePath returns the local cache directory for this repo under cacheDir.
 // e.g. for "https://k8s.io/api" → "<cacheDir>/k8s.io/api"
-func (r repoEntry) cachePath(cacheDir string) string {
-	rel := strings.TrimPrefix(r.url, "https://")
+func (r RepoEntry) CachePath(cacheDir string) string {
+	rel := strings.TrimPrefix(r.URL, "https://")
 	return filepath.Join(cacheDir, filepath.FromSlash(rel))
 }
 
-var (
-	repos    []repoEntry
-	reposDir string
-	outDir   string
-	cacheDir string
-	dock8sBin string
-)
-
-func init() {
-	flag.StringVar(&reposDir, "repos", "hack/docsite/repos", "directory containing repo entries")
-	flag.StringVar(&outDir, "out", "./docsite", "output directory for generated documentation")
-	flag.StringVar(&cacheDir, "cache", "./cache", "directory for caching cloned repos")
-	flag.StringVar(&dock8sBin, "dock8s", "./dock8s", "path to the dock8s binary")
-}
-
-// loadMeta parses a metadata.yaml file with the structure:
+// LoadMeta parses a metadata.yaml file with the structure:
 //
 //	refs:
 //	  - branch-or-tag
 //	  - another-ref
-func loadMeta(path string) (repoMeta, error) {
+func LoadMeta(path string) (RepoMeta, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return repoMeta{}, err
+		return RepoMeta{}, err
 	}
 
-	var meta repoMeta
+	var meta RepoMeta
 	inRefs := false
 	for _, line := range strings.Split(string(data), "\n") {
 		stripped := strings.TrimSpace(line)
@@ -89,18 +73,19 @@ func loadMeta(path string) (repoMeta, error) {
 	return meta, nil
 }
 
-// loadRepos walks reposDir and builds the repos list.
+// LoadRepos walks cfg.ReposDir and builds the list of repos.
 //
 // Each leaf directory under <reposDir>/<domain>/<path...> becomes one entry.
 // The URL is reconstructed as "https://<domain>/<path...>".
 // A directory is considered a leaf when it contains no subdirectories.
-func loadRepos() error {
-	absRepos, err := filepath.Abs(reposDir)
+func LoadRepos(cfg Config) ([]RepoEntry, error) {
+	absRepos, err := filepath.Abs(cfg.ReposDir)
 	if err != nil {
-		return fmt.Errorf("resolving repos dir: %w", err)
+		return nil, fmt.Errorf("resolving repos dir: %w", err)
 	}
 
-	return filepath.WalkDir(absRepos, func(path string, d os.DirEntry, err error) error {
+	var repos []RepoEntry
+	err = filepath.WalkDir(absRepos, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -140,26 +125,27 @@ func loadRepos() error {
 		urlPath := strings.ReplaceAll(rel, string(filepath.Separator), "/")
 
 		// Load metadata.yaml from the leaf directory.
-		meta, err := loadMeta(filepath.Join(path, "metadata.yaml"))
+		meta, err := LoadMeta(filepath.Join(path, "metadata.yaml"))
 		if err != nil {
 			return fmt.Errorf("loading metadata for %s: %w", urlPath, err)
 		}
 
-		repos = append(repos, repoEntry{
-			url:  "https://" + urlPath,
-			meta: meta,
+		repos = append(repos, RepoEntry{
+			URL:  "https://" + urlPath,
+			Meta: meta,
 		})
 		return nil
 	})
+	return repos, err
 }
 
-// checkoutRepo ensures the repo is present in its cache directory.
+// CheckoutRepo ensures the repo is present in its cache directory.
 //
 // If the cache directory already exists it is assumed to be a valid checkout
 // and the function returns immediately (no fetch/pull is performed).
 // Otherwise a plain `git clone <url> <dest>` is used.
-func checkoutRepo(r repoEntry) error {
-	dest := r.cachePath(cacheDir)
+func CheckoutRepo(cfg Config, r RepoEntry) error {
+	dest := r.CachePath(cfg.CacheDir)
 
 	// Already present — nothing to do.
 	if _, err := os.Stat(dest); err == nil {
@@ -171,18 +157,18 @@ func checkoutRepo(r repoEntry) error {
 		return fmt.Errorf("creating parent dirs for %s: %w", dest, err)
 	}
 
-	fmt.Printf("  cloning: %s → %s\n", r.url, dest)
-	cmd := exec.Command("git", "clone", r.url, dest)
+	fmt.Printf("  cloning: %s → %s\n", r.URL, dest)
+	cmd := exec.Command("git", "clone", r.URL, dest)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("checkout of %s failed: %w", r.url, err)
+		return fmt.Errorf("checkout of %s failed: %w", r.URL, err)
 	}
 	return nil
 }
 
-// generateDocsForRepo generates documentation for all refs of a repo.
+// GenerateDocsForRepo generates documentation for all refs of a repo.
 //
 // For each ref it:
 //  1. Fetches the latest from origin.
@@ -190,19 +176,19 @@ func checkoutRepo(r repoEntry) error {
 //  3. Determines the source directories via repos/<path>/api-dirs.sh, or
 //     falls back to the repo root if the script is absent.
 //  4. Runs dock8s -generate <outDir>/<path>@<ref> <dirs...>.
-func generateDocsForRepo(r repoEntry) error {
-	dest := r.cachePath(cacheDir)
-	repoRelPath := strings.TrimPrefix(r.url, "https://")
+func GenerateDocsForRepo(cfg Config, r RepoEntry) error {
+	dest := r.CachePath(cfg.CacheDir)
+	repoRelPath := strings.TrimPrefix(r.URL, "https://")
 
-	for _, ref := range r.meta.Refs {
-		fmt.Printf("\n  [%s @ %s]\n", r.url, ref)
+	for _, ref := range r.Meta.Refs {
+		fmt.Printf("\n  [%s @ %s]\n", r.URL, ref)
 
 		// Fetch all branches and tags so we have the latest refs.
 		fetchCmd := exec.Command("git", "-C", dest, "fetch", "--all", "--tags")
 		fetchCmd.Stdout = os.Stdout
 		fetchCmd.Stderr = os.Stderr
 		if err := fetchCmd.Run(); err != nil {
-			return fmt.Errorf("git fetch for %s: %w", r.url, err)
+			return fmt.Errorf("git fetch for %s: %w", r.URL, err)
 		}
 
 		// Checkout the ref (detaches HEAD for tags, switches branch otherwise).
@@ -210,7 +196,7 @@ func generateDocsForRepo(r repoEntry) error {
 		checkoutCmd.Stdout = os.Stdout
 		checkoutCmd.Stderr = os.Stderr
 		if err := checkoutCmd.Run(); err != nil {
-			return fmt.Errorf("git checkout %s for %s: %w", ref, r.url, err)
+			return fmt.Errorf("git checkout %s for %s: %w", ref, r.URL, err)
 		}
 
 		// For branches, reset to the remote tip. Silently ignored for tags
@@ -221,12 +207,12 @@ func generateDocsForRepo(r repoEntry) error {
 		_ = resetCmd.Run()
 
 		// Determine the source directories.
-		apiDirsScript := filepath.Join(reposDir, filepath.FromSlash(repoRelPath), "api-dirs.sh")
+		apiDirsScript := filepath.Join(cfg.ReposDir, filepath.FromSlash(repoRelPath), "api-dirs.sh")
 		var srcDirs []string
 		if _, err := os.Stat(apiDirsScript); err == nil {
 			out, err := exec.Command(apiDirsScript, dest).Output()
 			if err != nil {
-				return fmt.Errorf("api-dirs.sh for %s@%s: %w", r.url, ref, err)
+				return fmt.Errorf("api-dirs.sh for %s@%s: %w", r.URL, ref, err)
 			}
 			scanner := bufio.NewScanner(strings.NewReader(string(out)))
 			for scanner.Scan() {
@@ -240,42 +226,43 @@ func generateDocsForRepo(r repoEntry) error {
 		}
 
 		// Run dock8s to generate the documentation website.
-		generateDest := filepath.Join(outDir, repoRelPath+"@"+ref)
+		generateDest := filepath.Join(cfg.OutDir, repoRelPath+"@"+ref)
 		args := append([]string{"-generate", generateDest}, srcDirs...)
-		fmt.Printf("  running: %s %s\n", dock8sBin, strings.Join(args, " "))
-		dock8sCmd := exec.Command(dock8sBin, args...)
+		fmt.Printf("  running: %s %s\n", cfg.Dock8sBin, strings.Join(args, " "))
+		dock8sCmd := exec.Command(cfg.Dock8sBin, args...)
 		dock8sCmd.Stdout = os.Stdout
 		dock8sCmd.Stderr = os.Stderr
 		if err := dock8sCmd.Run(); err != nil {
-			return fmt.Errorf("dock8s generate for %s@%s: %w", r.url, ref, err)
+			return fmt.Errorf("dock8s generate for %s@%s: %w", r.URL, ref, err)
 		}
 	}
 	return nil
 }
 
-func main() {
-	flag.Parse()
-
-	if err := loadRepos(); err != nil {
-		log.Fatalf("loading repos: %v", err)
+// Run executes the full docsite generation pipeline.
+func Run(cfg Config) error {
+	repos, err := LoadRepos(cfg)
+	if err != nil {
+		return fmt.Errorf("loading repos: %w", err)
 	}
 
-	fmt.Printf("Loaded %d repos from %s\n", len(repos), reposDir)
+	fmt.Printf("Loaded %d repos from %s\n", len(repos), cfg.ReposDir)
 	for _, r := range repos {
-		fmt.Printf("  %s  refs: %v\n", r.url, r.meta.Refs)
+		fmt.Printf("  %s  refs: %v\n", r.URL, r.Meta.Refs)
 	}
 
-	fmt.Printf("\nChecking out repos into %s\n", cacheDir)
+	fmt.Printf("\nChecking out repos into %s\n", cfg.CacheDir)
 	for _, r := range repos {
-		if err := checkoutRepo(r); err != nil {
-			log.Fatalf("checkout failed: %v", err)
+		if err := CheckoutRepo(cfg, r); err != nil {
+			return fmt.Errorf("checkout failed: %w", err)
 		}
 	}
 
-	fmt.Printf("\nGenerating documentation into %s\n", outDir)
+	fmt.Printf("\nGenerating documentation into %s\n", cfg.OutDir)
 	for _, r := range repos {
-		if err := generateDocsForRepo(r); err != nil {
-			log.Fatalf("generate failed: %v", err)
+		if err := GenerateDocsForRepo(cfg, r); err != nil {
+			return fmt.Errorf("generate failed: %w", err)
 		}
 	}
+	return nil
 }
