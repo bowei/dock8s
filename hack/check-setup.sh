@@ -38,6 +38,16 @@ else
     echo "  [skip] npm not found"
 fi
 
+echo "Installing Playwright browsers..."
+if command -v npx &>/dev/null; then
+    npx --prefix "$(dirname "$0")/.." playwright install &>/dev/null
+    echo "  [ok] playwright install done"
+    ((PASS++)) || true
+else
+    echo "  [missing] npx not found, skipping playwright install"
+    ((FAIL++)) || true
+fi
+
 echo ""
 if [[ $FAIL -eq 0 ]]; then
     echo "Setup OK ($PASS checks passed)"
