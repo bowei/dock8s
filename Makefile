@@ -55,3 +55,8 @@ test-js:
 	@echo "[TEST] js"
 	npm test
 
+.PHONY: test-e2e
+test-e2e: build
+	@echo "[TEST] e2e"
+	npx playwright test
+
