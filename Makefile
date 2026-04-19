@@ -12,10 +12,10 @@ check-setup:
 	@hack/check-setup.sh
 
 .PHONY: build
-build: themes $(EXEC) $(DOCSITE_EXEC)
+build: $(EXEC) $(DOCSITE_EXEC)
 
 .PHONY: $(EXEC)
-$(EXEC):
+$(EXEC): themes
 	@echo "[BUILD] $@"
 	go build -o $(EXEC) ./cmd/dock8s
 
@@ -25,9 +25,23 @@ $(DOCSITE_EXEC):
 	go build -o $(DOCSITE_EXEC) ./cmd/docsite
 
 .PHONY: test
-test:
-	@echo "[TEST]"
+test: test-go test-js test-e2e
+
+.PHONY: test-go
+test-go:
+	@echo "[TEST] go"
 	go test ./pkg/... ./cmd/...
+
+.PHONY: test-js
+test-js:
+	@echo "[TEST] js"
+	npm test
+
+.PHONY: test-e2e
+test-e2e: build
+	@echo "[TEST] e2e"
+	npx playwright test
+
 
 .PHONY: themes
 themes: $(CSS_FILES)
@@ -49,14 +63,3 @@ clean-themes:
 	@echo "[CLEAN] themes"
 	rm -f $(CSS_FILES)
 	@echo "✓ Themes cleaned."
-
-.PHONY: test-js
-test-js:
-	@echo "[TEST] js"
-	npm test
-
-.PHONY: test-e2e
-test-e2e: build
-	@echo "[TEST] e2e"
-	npx playwright test
-
