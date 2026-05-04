@@ -6,7 +6,12 @@
       "Bash(python3 -c ':*)",
       "Bash(go build:*)",
       "Bash(go test:*)",
-      "Bash(make build:*)"
+      "Bash(make build:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(npm install:*)",
+      "Bash(npx playwright:*)",
+      "Bash(NODE_OPTIONS=--experimental-vm-modules npx jest)"
     ]
   }
 }
