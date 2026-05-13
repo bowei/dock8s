@@ -219,6 +219,7 @@ func getPkgPathFromDir(pkgDir string) (string, error) {
 
 	cmd := exec.Command("go", args...)
 	cmd.Dir = pkgDir
+	cmd.Env = append(os.Environ(), "GOWORK=off")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("could not run 'go list' in dir %s: %w", pkgDir, err)
@@ -260,6 +261,7 @@ type moduleInfo struct {
 func getModuleInfo(pkgDir string) (moduleInfo, error) {
 	cmd := exec.Command("go", "list", "-m", "-json")
 	cmd.Dir = pkgDir
+	cmd.Env = append(os.Environ(), "GOWORK=off")
 	out, err := cmd.Output()
 	if err != nil {
 		return moduleInfo{}, nil
