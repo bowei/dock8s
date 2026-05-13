@@ -2,38 +2,43 @@ package app
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func TestCachePath(t *testing.T) {
+func TestCachePathForRef(t *testing.T) {
 	tests := []struct {
 		url      string
 		cacheDir string
+		ref      string
 		want     string
 	}{
 		{
 			url:      "https://k8s.io/api",
 			cacheDir: "/cache",
-			want:     "/cache/k8s.io/api",
+			ref:      "main",
+			want:     "/cache/k8s.io/api/main",
 		},
 		{
 			url:      "https://github.com/foo/bar",
 			cacheDir: "/tmp/cache",
-			want:     "/tmp/cache/github.com/foo/bar",
+			ref:      "v1.0.0",
+			want:     "/tmp/cache/github.com/foo/bar/v1.0.0",
 		},
 		{
 			url:      "https://example.com/a/b/c",
 			cacheDir: "/cache",
-			want:     "/cache/example.com/a/b/c",
+			ref:      "release-1.27",
+			want:     "/cache/example.com/a/b/c/release-1.27",
 		},
 	}
 	for _, tt := range tests {
 		r := RepoEntry{URL: tt.url}
-		got := r.CachePath(tt.cacheDir)
+		got := r.CachePathForRef(tt.cacheDir, tt.ref)
 		if got != tt.want {
-			t.Errorf("CachePath(%q, %q) = %q, want %q", tt.url, tt.cacheDir, got, tt.want)
+			t.Errorf("CachePathForRef(%q, %q, %q) = %q, want %q", tt.url, tt.cacheDir, tt.ref, got, tt.want)
 		}
 	}
 }
@@ -261,18 +266,45 @@ func TestGenerateIndex(t *testing.T) {
 	}
 }
 
-func TestCheckoutRepo_CacheHit(t *testing.T) {
-	// When the cache directory already exists, CheckoutRepo should return
-	// immediately without trying to clone.
+// initLocalRepo creates a temporary git repo with one empty commit on branch "main".
+// Returns the repo directory path.
+func initLocalRepo(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	cmds := [][]string{
+		{"git", "-C", dir, "init", "-b", "main"},
+		{"git", "-C", dir, "config", "user.email", "t@t.com"},
+		{"git", "-C", dir, "config", "user.name", "T"},
+		{"git", "-C", dir, "commit", "--allow-empty", "-m", "init"},
+	}
+	for _, c := range cmds {
+		cmd := exec.Command(c[0], c[1:]...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("setup %v: %s", c, out)
+		}
+	}
+	return dir
+}
+
+func TestCheckoutRef(t *testing.T) {
+	remoteDir := initLocalRepo(t)
 	cacheDir := t.TempDir()
-	r := RepoEntry{URL: "https://k8s.io/api"}
-	dest := r.CachePath(cacheDir)
-	if err := os.MkdirAll(dest, 0o755); err != nil {
-		t.Fatal(err)
+	// Use the local path directly as the URL; CachePathForRef still produces a
+	// valid (if unusual) path, and git accepts local paths as clone sources.
+	r := RepoEntry{URL: remoteDir}
+	cfg := Config{CacheDir: cacheDir}
+
+	// Cache miss: should perform a shallow clone.
+	if err := CheckoutRef(cfg, r, "main"); err != nil {
+		t.Fatalf("CheckoutRef (miss): %v", err)
+	}
+	dest := r.CachePathForRef(cacheDir, "main")
+	if _, err := os.Stat(filepath.Join(dest, ".git")); err != nil {
+		t.Errorf(".git not found at %s after clone: %v", dest, err)
 	}
 
-	cfg := Config{CacheDir: cacheDir}
-	if err := CheckoutRepo(cfg, r); err != nil {
-		t.Errorf("CheckoutRepo() unexpected error on cache hit: %v", err)
+	// Cache hit: should fetch+reset without error.
+	if err := CheckoutRef(cfg, r, "main"); err != nil {
+		t.Fatalf("CheckoutRef (hit): %v", err)
 	}
 }

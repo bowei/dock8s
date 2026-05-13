@@ -37,11 +37,12 @@ type RepoMeta struct {
 	Refs []string
 }
 
-// CachePath returns the local cache directory for this repo under cacheDir.
-// e.g. for "https://k8s.io/api" → "<cacheDir>/k8s.io/api"
-func (r RepoEntry) CachePath(cacheDir string) string {
+// CachePathForRef returns the local cache directory for a specific ref of this
+// repo under cacheDir. e.g. for "https://k8s.io/api" and ref "main" →
+// "<cacheDir>/k8s.io/api/main"
+func (r RepoEntry) CachePathForRef(cacheDir, ref string) string {
 	rel := strings.TrimPrefix(r.URL, "https://")
-	return filepath.Join(cacheDir, filepath.FromSlash(rel))
+	return filepath.Join(cacheDir, filepath.FromSlash(rel), ref)
 }
 
 // LoadMeta parses a metadata.yaml file with the structure:
@@ -140,17 +141,30 @@ func LoadRepos(cfg Config) ([]RepoEntry, error) {
 	return repos, err
 }
 
-// CheckoutRepo ensures the repo is present in its cache directory.
+// CheckoutRef ensures a shallow clone of the given ref is present and current.
 //
-// If the cache directory already exists it is assumed to be a valid checkout
-// and the function returns immediately (no fetch/pull is performed).
-// Otherwise a plain `git clone <url> <dest>` is used.
-func CheckoutRepo(cfg Config, r RepoEntry) error {
-	dest := r.CachePath(cfg.CacheDir)
+// On cache miss: git clone --depth 1 --branch <ref> --single-branch <url> <dest>.
+// On cache hit: git fetch --depth 1 origin <ref> + git reset --hard FETCH_HEAD.
+//
+// Note: refs must be branch or tag names. Bare commit SHAs are not supported
+// by --branch and will cause the clone to fail.
+func CheckoutRef(cfg Config, r RepoEntry, ref string) error {
+	dest := r.CachePathForRef(cfg.CacheDir, ref)
 
-	// Already present — nothing to do.
 	if _, err := os.Stat(dest); err == nil {
-		fmt.Printf("  cache hit:  %s\n", dest)
+		fmt.Printf("  updating: %s @ %s\n", r.URL, ref)
+		fetchCmd := exec.Command("git", "-C", dest, "fetch", "--depth", "1", "origin", ref)
+		fetchCmd.Stdout = os.Stdout
+		fetchCmd.Stderr = os.Stderr
+		if err := fetchCmd.Run(); err != nil {
+			return fmt.Errorf("git fetch for %s@%s: %w", r.URL, ref, err)
+		}
+		resetCmd := exec.Command("git", "-C", dest, "reset", "--hard", "FETCH_HEAD")
+		resetCmd.Stdout = os.Stdout
+		resetCmd.Stderr = os.Stderr
+		if err := resetCmd.Run(); err != nil {
+			return fmt.Errorf("git reset for %s@%s: %w", r.URL, ref, err)
+		}
 		return nil
 	}
 
@@ -158,13 +172,12 @@ func CheckoutRepo(cfg Config, r RepoEntry) error {
 		return fmt.Errorf("creating parent dirs for %s: %w", dest, err)
 	}
 
-	fmt.Printf("  cloning: %s → %s\n", r.URL, dest)
-	cmd := exec.Command("git", "clone", r.URL, dest)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("checkout of %s failed: %w", r.URL, err)
+	fmt.Printf("  cloning: %s @ %s → %s\n", r.URL, ref, dest)
+	cloneCmd := exec.Command("git", "clone", "--depth", "1", "--branch", ref, "--single-branch", r.URL, dest)
+	cloneCmd.Stdout = os.Stdout
+	cloneCmd.Stderr = os.Stderr
+	if err := cloneCmd.Run(); err != nil {
+		return fmt.Errorf("checkout of %s@%s failed: %w", r.URL, ref, err)
 	}
 	return nil
 }
@@ -172,40 +185,18 @@ func CheckoutRepo(cfg Config, r RepoEntry) error {
 // GenerateDocsForRepo generates documentation for all refs of a repo.
 //
 // For each ref it:
-//  1. Fetches the latest from origin.
-//  2. Checks out the ref and resets to its tip (for branches).
-//  3. Determines the source directories via repos/<path>/api-dirs.sh, or
+//  1. Determines the source directories via repos/<path>/api-dirs.sh, or
 //     falls back to the repo root if the script is absent.
-//  4. Runs dock8s -generate <outDir>/<path>@<ref> <dirs...>.
+//  2. Runs dock8s -generate <outDir>/<path>@<ref> <dirs...>.
+//
+// CheckoutRef must be called for each ref before this function.
 func GenerateDocsForRepo(cfg Config, r RepoEntry) error {
-	dest := r.CachePath(cfg.CacheDir)
 	repoRelPath := strings.TrimPrefix(r.URL, "https://")
 
 	for _, ref := range r.Meta.Refs {
 		fmt.Printf("\n  [%s @ %s]\n", r.URL, ref)
 
-		// Fetch all branches and tags so we have the latest refs.
-		fetchCmd := exec.Command("git", "-C", dest, "fetch", "--all", "--tags")
-		fetchCmd.Stdout = os.Stdout
-		fetchCmd.Stderr = os.Stderr
-		if err := fetchCmd.Run(); err != nil {
-			return fmt.Errorf("git fetch for %s: %w", r.URL, err)
-		}
-
-		// Checkout the ref (detaches HEAD for tags, switches branch otherwise).
-		checkoutCmd := exec.Command("git", "-C", dest, "checkout", ref)
-		checkoutCmd.Stdout = os.Stdout
-		checkoutCmd.Stderr = os.Stderr
-		if err := checkoutCmd.Run(); err != nil {
-			return fmt.Errorf("git checkout %s for %s: %w", ref, r.URL, err)
-		}
-
-		// For branches, reset to the remote tip. Silently ignored for tags
-		// since origin/<tag> doesn't exist and tags don't move.
-		resetCmd := exec.Command("git", "-C", dest, "reset", "--hard", "origin/"+ref)
-		resetCmd.Stdout = os.Stdout
-		resetCmd.Stderr = os.Stderr
-		_ = resetCmd.Run()
+		dest := r.CachePathForRef(cfg.CacheDir, ref)
 
 		// Determine the source directories.
 		apiDirsScript := filepath.Join(cfg.ReposDir, filepath.FromSlash(repoRelPath), "api-dirs.sh")
@@ -382,8 +373,10 @@ func Run(cfg Config) error {
 
 	fmt.Printf("\nChecking out repos into %s\n", cfg.CacheDir)
 	for _, r := range repos {
-		if err := CheckoutRepo(cfg, r); err != nil {
-			return fmt.Errorf("checkout failed: %w", err)
+		for _, ref := range r.Meta.Refs {
+			if err := CheckoutRef(cfg, r, ref); err != nil {
+				return fmt.Errorf("checkout failed: %w", err)
+			}
 		}
 	}
 
