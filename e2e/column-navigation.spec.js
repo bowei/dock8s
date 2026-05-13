@@ -63,4 +63,15 @@ test.describe('column navigation', () => {
     // Phase column should contain enum values (not fields with chevrons)
     await expect(page.locator('.column').nth(2).locator('li')).toHaveCount(3);
   });
+
+  test('enum values show their literal string value', async ({ page }) => {
+    await page.goto(`/#${WIDGET}/Status`);
+    await page.locator('.column:last-child li[data-field-name="Phase"]').click();
+    const phaseCol = page.locator('.column').nth(2);
+    // Each const has a string literal — the .enum-value span must be present and correct.
+    // Values appear in source declaration order: Pending, Running, Failed.
+    await expect(phaseCol.locator('li').nth(0).locator('.enum-value')).toHaveText('"Pending"');
+    await expect(phaseCol.locator('li').nth(1).locator('.enum-value')).toHaveText('"Running"');
+    await expect(phaseCol.locator('li').nth(2).locator('.enum-value')).toHaveText('"Failed"');
+  });
 });
