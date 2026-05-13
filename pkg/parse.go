@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"k8s.io/klog/v2"
@@ -454,6 +455,45 @@ func collectDeclsForType(docPkg *doc.Package, targetTypeName string) []*ast.GenD
 	return decls
 }
 
+// extractLiteralValue returns the source-level string for a constant value
+// expression. specIndex is the 0-based position of the ValueSpec within its
+// GenDecl, used to evaluate iota. Returns "" when the value cannot be
+// determined from the AST alone (e.g. references to other named constants).
+func extractLiteralValue(expr ast.Expr, specIndex int) string {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		return e.Value
+	case *ast.Ident:
+		if e.Name == "iota" {
+			return strconv.Itoa(specIndex)
+		}
+	case *ast.UnaryExpr:
+		if e.Op == token.SUB {
+			if v, err := strconv.Atoi(extractLiteralValue(e.X, specIndex)); err == nil {
+				return strconv.Itoa(-v)
+			}
+		}
+	case *ast.BinaryExpr:
+		lv, lerr := strconv.Atoi(extractLiteralValue(e.X, specIndex))
+		rv, rerr := strconv.Atoi(extractLiteralValue(e.Y, specIndex))
+		if lerr == nil && rerr == nil {
+			switch e.Op {
+			case token.ADD:
+				return strconv.Itoa(lv + rv)
+			case token.SUB:
+				return strconv.Itoa(lv - rv)
+			case token.MUL:
+				return strconv.Itoa(lv * rv)
+			case token.SHL:
+				if rv >= 0 {
+					return strconv.Itoa(lv << uint(rv))
+				}
+			}
+		}
+	}
+	return ""
+}
+
 // findConstantsByType finds constants that have an explicit type matching the target type
 func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo {
 	var enumValues []EnumInfo
@@ -463,6 +503,7 @@ func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo 
 	decls := collectDeclsForType(docPkg, targetTypeName)
 
 	for _, d := range decls {
+		specIndex := 0
 		for _, spec := range d.Specs {
 			vs, ok := spec.(*ast.ValueSpec)
 			if !ok {
@@ -472,7 +513,7 @@ func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo 
 			if vs.Type != nil {
 				if ident, ok := vs.Type.(*ast.Ident); ok && ident.Name == targetTypeName {
 					// Found a constant with explicit type matching our target
-					for _, name := range vs.Names {
+					for i, name := range vs.Names {
 						klog.V(2).Infof("Looking at %v %s", ident, name.Name)
 
 						if ast.IsExported(name.Name) {
@@ -480,9 +521,14 @@ func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo 
 							if vs.Doc != nil {
 								docString = vs.Doc.Text()
 							}
+							var value string
+							if i < len(vs.Values) {
+								value = extractLiteralValue(vs.Values[i], specIndex)
+							}
 							klog.V(2).Infof("Found exported enum const value with explicit type: %s", name.Name)
 							enumValues = append(enumValues, EnumInfo{
 								Name:            name.Name,
+								Value:           value,
 								DocString:       strings.TrimSpace(docString),
 								ParsedDocString: *parseGoDocString(docString),
 							})
@@ -501,9 +547,14 @@ func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo 
 								if vs.Doc != nil {
 									docString = vs.Doc.Text()
 								}
+								var value string
+								if len(callExpr.Args) > 0 {
+									value = extractLiteralValue(callExpr.Args[0], specIndex)
+								}
 								klog.V(2).Infof("Found exported enum const value with type conversion: %s", name.Name)
 								enumValues = append(enumValues, EnumInfo{
 									Name:            name.Name,
+									Value:           value,
 									DocString:       strings.TrimSpace(docString),
 									ParsedDocString: *parseGoDocString(docString),
 								})
@@ -512,6 +563,7 @@ func findConstantsByType(docPkg *doc.Package, targetTypeName string) []EnumInfo 
 					}
 				}
 			}
+			specIndex++
 		}
 	}
 

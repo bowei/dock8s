@@ -32,7 +32,8 @@ type FieldInfo struct {
 }
 
 type EnumInfo struct {
-	Name string `json:"name"`
+	Name  string `json:"name"`
+	Value string `json:"value,omitempty"`
 
 	DocString       string      `json:"docString"`
 	ParsedDocString GoDocString `json:"parsedDocString"`

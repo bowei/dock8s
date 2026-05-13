@@ -49,7 +49,7 @@ const baseTypeData = {
     typeName: 'Enum',
     package: 'example.io/v1',
     enumValues: [
-      { name: 'ValueA', docString: '', parsedDocString: null },
+      { name: 'ValueA', value: '"active"', docString: '', parsedDocString: null },
       {
         name: 'ValueB',
         docString: 'ValueB doc.',
@@ -149,5 +149,17 @@ describe('createColumn', () => {
     const items = col.querySelectorAll('li');
     expect(items[0].querySelector('.doc-string')).toBeNull();
     expect(items[1].querySelector('.doc-string')).not.toBeNull();
+  });
+
+  it('renders literal value when present', () => {
+    const col = createColumn('example.io/v1.Enum', baseTypeData, () => {});
+    const items = col.querySelectorAll('li');
+    expect(items[0].querySelector('.enum-value').textContent).toBe('"active"');
+  });
+
+  it('omits value span when value is absent', () => {
+    const col = createColumn('example.io/v1.Enum', baseTypeData, () => {});
+    const items = col.querySelectorAll('li');
+    expect(items[1].querySelector('.enum-value')).toBeNull();
   });
 });

@@ -107,6 +107,13 @@ export function createColumn(typeName, typeData, onFieldClick, expandedDocString
 
       line1.appendChild(enumName);
 
+      if (enumVal.value) {
+        const enumValue = document.createElement('span');
+        enumValue.textContent = enumVal.value;
+        enumValue.className = 'enum-value';
+        line1.appendChild(enumValue);
+      }
+
       const contentWrapper = document.createElement('div');
       contentWrapper.appendChild(line1);
       if (enumVal.docString) {

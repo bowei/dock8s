@@ -69,10 +69,12 @@ const (
 	expectedEnums := []EnumInfo{
 		{
 			Name:      "StatusActive",
+			Value:     `"active"`,
 			DocString: "StatusActive means it's active",
 		},
 		{
 			Name:      "StatusInactive",
+			Value:     `"inactive"`,
 			DocString: "StatusInactive means it's inactive",
 		},
 	}
@@ -88,6 +90,9 @@ const (
 		actual := typeInfo.EnumValues[i]
 		if actual.Name != expected.Name {
 			t.Errorf("enum[%d].Name: expected %s, got %s", i, expected.Name, actual.Name)
+		}
+		if actual.Value != expected.Value {
+			t.Errorf("enum[%d].Value: expected %q, got %q", i, expected.Value, actual.Value)
 		}
 		if actual.DocString != expected.DocString {
 			t.Errorf("enum[%d].DocString: expected %s, got %s", i, expected.DocString, actual.DocString)
@@ -152,10 +157,12 @@ var (
 	expectedEnums := []EnumInfo{
 		{
 			Name:      "StatusActive",
+			Value:     `"active"`,
 			DocString: "StatusActive means it's active",
 		},
 		{
 			Name:      "StatusInactive",
+			Value:     `"inactive"`,
 			DocString: "StatusInactive means it's inactive",
 		},
 	}
@@ -171,6 +178,9 @@ var (
 		actual := typeInfo.EnumValues[i]
 		if actual.Name != expected.Name {
 			t.Errorf("enum[%d].Name: expected %s, got %s", i, expected.Name, actual.Name)
+		}
+		if actual.Value != expected.Value {
+			t.Errorf("enum[%d].Value: expected %q, got %q", i, expected.Value, actual.Value)
 		}
 		if actual.DocString != expected.DocString {
 			t.Errorf("enum[%d].DocString: expected %s, got %s", i, expected.DocString, actual.DocString)
@@ -395,6 +405,7 @@ const (
 	expected := []EnumInfo{
 		{
 			Name:      "Val1",
+			Value:     `"Value1"`,
 			DocString: "Doc for Val1",
 			ParsedDocString: GoDocString{
 				Elements: []GoDocElem{
@@ -402,9 +413,10 @@ const (
 				},
 			},
 		},
-		{Name: "Val2", DocString: ""},
+		{Name: "Val2", Value: `"Value2"`, DocString: ""},
 		{
 			Name:      "Val4",
+			Value:     `"Value4"`,
 			DocString: "Doc for Val4",
 			ParsedDocString: GoDocString{
 				Elements: []GoDocElem{
@@ -412,11 +424,96 @@ const (
 				},
 			},
 		},
-		{Name: "Val5", DocString: ""},
+		{Name: "Val5", Value: `"Value5"`, DocString: ""},
 	}
 
 	if !reflect.DeepEqual(got, expected) {
 		t.Errorf("got %#v, want %#v", got, expected)
+	}
+}
+
+func TestExtractLiteralValue(t *testing.T) {
+	src := `
+package testpkg
+
+type Phase int
+type Bits uint
+
+const (
+	PhaseA Phase = iota
+	PhaseB
+	PhaseC
+)
+
+const (
+	BitNone  Bits = 0
+	BitOne   Bits = 1 << iota
+	BitTwo
+	BitFour
+)
+
+type Code int
+const (
+	CodeNeg Code = -1
+	CodeOff Code = 0
+	CodeOn  Code = 1
+)
+`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("failed to parse source: %v", err)
+	}
+	docPkg, err := doc.NewFromFiles(fset, []*ast.File{f}, "testpkg")
+	if err != nil {
+		t.Fatalf("failed to create doc package: %v", err)
+	}
+
+	tests := []struct {
+		typeName string
+		want     []EnumInfo
+	}{
+		{
+			// Only PhaseA has an explicit type annotation; PhaseB/PhaseC use
+			// implicit iota repetition (no type, no value) and are not found.
+			typeName: "Phase",
+			want: []EnumInfo{
+				{Name: "PhaseA", Value: "0"},
+			},
+		},
+		{
+			// BitOne uses 1<<iota at specIndex 1 → 1<<1 = 2.
+			// BitTwo/BitFour have no type annotation and are not found.
+			typeName: "Bits",
+			want: []EnumInfo{
+				{Name: "BitNone", Value: "0"},
+				{Name: "BitOne", Value: "2"},
+			},
+		},
+		{
+			typeName: "Code",
+			want: []EnumInfo{
+				{Name: "CodeNeg", Value: "-1"},
+				{Name: "CodeOff", Value: "0"},
+				{Name: "CodeOn", Value: "1"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		got := findConstantsByType(docPkg, tt.typeName)
+		if len(got) != len(tt.want) {
+			t.Errorf("%s: got %d values, want %d", tt.typeName, len(got), len(tt.want))
+			continue
+		}
+		for i := range tt.want {
+			if got[i].Name != tt.want[i].Name {
+				t.Errorf("%s[%d].Name: got %q, want %q", tt.typeName, i, got[i].Name, tt.want[i].Name)
+			}
+			if got[i].Value != tt.want[i].Value {
+				t.Errorf("%s[%d].Value: got %q, want %q", tt.typeName, i, got[i].Value, tt.want[i].Value)
+			}
+		}
 	}
 }
 
