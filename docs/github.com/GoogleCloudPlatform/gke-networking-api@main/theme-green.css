@@ -26,10 +26,20 @@ kbd {
 }
 #repo-div {
   position: fixed;
-  bottom: 10px;
-  right: 10px;
-  font-family: sans-serif;
-  font-size: 0.8em;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #52796f;
+  text-decoration: none;
+}
+#repo-div:hover {
+  color: #1b4332;
+}
+#repo-div svg {
+  flex-shrink: 0;
 }
 #main-container {
   display: flex;
