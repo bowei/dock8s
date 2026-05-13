@@ -12,7 +12,8 @@
       "Bash(npm install:*)",
       "Bash(npx playwright:*)",
       "Bash(NODE_OPTIONS=--experimental-vm-modules npx jest)",
-      "Bash(make test-e2e *)"
+      "Bash(make test-e2e *)",
+      "Bash(make)"
     ]
   }
 }

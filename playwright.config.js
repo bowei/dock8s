@@ -6,7 +6,7 @@ export default defineConfig({
     baseURL: 'http://localhost:3001',
   },
   webServer: {
-    command: './dock8s -generate e2e/dist -type example.com/widget/v1.Widget e2e/fixture && python3 -m http.server 3001 --directory e2e/dist',
+    command: './dock8s -generate e2e/dist -type example.com/widget/v1.Widget -source-url-base https://github.com/example/widget/blob/main e2e/fixture && python3 -m http.server 3001 --directory e2e/dist',
     port: 3001,
     reuseExistingServer: !process.env.CI,
     timeout: 60000,

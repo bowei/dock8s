@@ -74,4 +74,28 @@ test.describe('column navigation', () => {
     await expect(phaseCol.locator('li').nth(1).locator('.enum-value')).toHaveText('"Running"');
     await expect(phaseCol.locator('li').nth(2).locator('.enum-value')).toHaveText('"Failed"');
   });
+
+  test('source links appear on fields with correct href', async ({ page }) => {
+    // The fixture is a local module, so githubSourceURL returns "".
+    // The -source-url-base flag in playwright.config.js supplies the fallback:
+    //   https://github.com/example/widget/blob/main
+    // Resulting field URLs look like:
+    //   https://github.com/example/widget/blob/main/types.go#L<line>
+    await page.goto(`/#example.com/widget/v1.TypeMeta`);
+    const kindItem = page.locator('li[data-field-name="Kind"]');
+    const link = kindItem.locator('.source-link');
+    await expect(link).toBeVisible();
+    const href = await link.getAttribute('href');
+    expect(href).toMatch(/^https:\/\/github\.com\/example\/widget\/blob\/main\/types\.go#L\d+$/);
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  test('source links are absent when not navigating to fields with source data', async ({ page }) => {
+    // Enum columns have no struct fields and thus no source links.
+    await page.goto(`/#${WIDGET}/Status`);
+    await page.locator('.column:last-child li[data-field-name="Phase"]').click();
+    const phaseCol = page.locator('.column').nth(2);
+    await expect(phaseCol.locator('.source-link')).toHaveCount(0);
+  });
 });

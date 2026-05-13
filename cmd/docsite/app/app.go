@@ -218,8 +218,11 @@ func GenerateDocsForRepo(cfg Config, r RepoEntry) error {
 		}
 
 		// Run dock8s to generate the documentation website.
+		// Pass -source-url-base so dock8s can generate per-field source links
+		// even for local checkouts (which have no module version).
 		generateDest := filepath.Join(cfg.OutDir, repoRelPath+"@"+ref)
-		args := append([]string{"-generate", generateDest}, srcDirs...)
+		sourceURLBase := r.URL + "/blob/" + ref
+		args := append([]string{"-generate", generateDest, "-source-url-base", sourceURLBase}, srcDirs...)
 		fmt.Printf("  running: %s %s\n", cfg.Dock8sBin, strings.Join(args, " "))
 		dock8sCmd := exec.Command(cfg.Dock8sBin, args...)
 		dock8sCmd.Stdout = os.Stdout

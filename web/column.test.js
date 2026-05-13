@@ -14,6 +14,7 @@ const baseTypeData = {
         typeDecorators: [],
         docString: '',
         parsedDocString: null,
+        sourceURL: 'https://github.com/example/repo/blob/v1.0.0/types.go#L10',
       },
       {
         fieldName: 'Bar',
@@ -161,5 +162,21 @@ describe('createColumn', () => {
     const col = createColumn('example.io/v1.Enum', baseTypeData, () => {});
     const items = col.querySelectorAll('li');
     expect(items[1].querySelector('.enum-value')).toBeNull();
+  });
+
+  it('renders source link when sourceURL is present', () => {
+    const col = createColumn('example.io/v1.Foo', baseTypeData, () => {});
+    const nameItem = col.querySelectorAll('li')[0]; // Name field has sourceURL
+    const link = nameItem.querySelector('.source-link');
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('https://github.com/example/repo/blob/v1.0.0/types.go#L10');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('omits source link when sourceURL is absent', () => {
+    const col = createColumn('example.io/v1.Foo', baseTypeData, () => {});
+    const barItem = col.querySelectorAll('li')[1]; // Bar field has no sourceURL
+    expect(barItem.querySelector('.source-link')).toBeNull();
   });
 });

@@ -72,7 +72,7 @@ func runServe(srcDirs []string, webFS fs.FS) {
 			}
 			absDirs = append(absDirs, abs)
 		}
-		types, err := pkg.ParsePackages(absDirs)
+		types, err := pkg.ParsePackages(absDirs, pkg.ParseOptions{})
 		if err != nil {
 			klog.V(2).Infof("Error parsing packages: %v", err)
 			return

@@ -123,6 +123,19 @@ li.selected {
   color: @secondary-text;
 }
 
+.source-link {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6pt;
+  color: @secondary-text;
+  opacity: 0.5;
+  text-decoration: none;
+  vertical-align: middle;
+  &:hover {
+    opacity: 1;
+  }
+}
+
 .doc-string {
   font-size: @doc-string-size;
   margin-top: 10pt;

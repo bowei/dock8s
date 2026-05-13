@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/doc"
@@ -16,8 +17,24 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// ParseOptions configures optional behaviour of ParsePackages.
+type ParseOptions struct {
+	// SourceURLBase is a fallback GitHub-style URL base used when a package's
+	// module cannot be automatically resolved to a public repository (e.g.
+	// local development modules, private repos, or unknown vanity domains).
+	//
+	// Format: the URL up to and including the git ref, e.g.
+	//   https://github.com/myorg/myrepo/blob/main
+	//
+	// The full field URL is then constructed as:
+	//   <SourceURLBase>/<path-relative-to-module-root>#L<line>
+	//
+	// When empty, fields that cannot be auto-resolved produce no source link.
+	SourceURLBase string
+}
+
 // ParsePackages from the files in the given directories.
-func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
+func ParsePackages(pkgDirs []string, opts ParseOptions) (map[string]TypeInfo, error) {
 	allTypes := make(map[string]TypeInfo)
 	parsedPkgs := make(map[string]bool)
 	topLevelPkgs := make(map[string]bool)
@@ -60,7 +77,7 @@ func ParsePackages(pkgDirs []string) (map[string]TypeInfo, error) {
 		pkgDir := queue[0]
 		queue = queue[1:]
 
-		externalPkgs, err := parsePackage(pkgDir, allTypes)
+		externalPkgs, err := parsePackage(pkgDir, allTypes, opts.SourceURLBase)
 		if err != nil {
 			klog.V(2).Infof("Error parsing package %s: %v", pkgDir, err)
 			continue
@@ -230,6 +247,117 @@ func resolvePkgDir(pkgPath string) (string, error) {
 	return ret, nil
 }
 
+// moduleInfo holds the Go module metadata needed to construct source URLs.
+type moduleInfo struct {
+	Path    string // module import path, e.g. "k8s.io/api"
+	Version string // semver or pseudo-version, e.g. "v0.28.0"; empty for the main module
+	Dir     string // absolute path to the module root on disk
+}
+
+// getModuleInfo runs `go list -m -json` in pkgDir and returns the module
+// metadata. Returns an empty moduleInfo (no error) when the directory is not
+// part of a versioned module (e.g. the main module, or no go.mod).
+func getModuleInfo(pkgDir string) (moduleInfo, error) {
+	cmd := exec.Command("go", "list", "-m", "-json")
+	cmd.Dir = pkgDir
+	out, err := cmd.Output()
+	if err != nil {
+		return moduleInfo{}, nil
+	}
+	var info moduleInfo
+	if err := json.Unmarshal(out, &info); err != nil {
+		return moduleInfo{}, nil
+	}
+	return info, nil
+}
+
+// vanityPrefixes maps known Go vanity import domain prefixes to their
+// equivalent github.com owner prefixes. Entries are checked in order; the
+// first match wins.
+//
+// Format of each entry:
+//
+//	vanity  — the import-path prefix to match, must end with "/"
+//	github  — the replacement prefix, must start with "github.com/" and end with "/"
+//
+// To add a new vanity domain, append a new struct literal here and document
+// why the mapping exists. The repo name is taken as the first path component
+// after the vanity prefix (e.g. "k8s.io/api" → repo "api").
+var vanityPrefixes = []struct{ vanity, github string }{
+	// k8s.io/* → github.com/kubernetes/*
+	// The Kubernetes core project (k8s.io) hosts its repositories on GitHub
+	// under the "kubernetes" organisation using k8s.io as a vanity domain.
+	{"k8s.io/", "github.com/kubernetes/"},
+
+	// sigs.k8s.io/* → github.com/kubernetes-sigs/*
+	// Kubernetes Special Interest Groups publish APIs under the sigs.k8s.io
+	// vanity domain; the actual repos live in the "kubernetes-sigs" org.
+	{"sigs.k8s.io/", "github.com/kubernetes-sigs/"},
+
+	// golang.org/x/* → github.com/golang/*
+	// The Go extended standard library (golang.org/x) is developed in the
+	// "golang" GitHub organisation with one repo per sub-path component.
+	{"golang.org/x/", "github.com/golang/"},
+}
+
+// githubSourceURL constructs a GitHub blob URL pointing to the given source
+// position. Returns "" when the module is not hosted on a known public GitHub
+// path (see vanityPrefixes) or when version information is unavailable (local
+// / main module).
+func githubSourceURL(mod moduleInfo, absFile string, line int) string {
+	if mod.Dir == "" || mod.Version == "" {
+		return "" // local or main module — no remote URL to link to
+	}
+
+	// Compute the file path relative to the module root.
+	relFile := strings.TrimPrefix(absFile, mod.Dir+"/")
+	if relFile == absFile {
+		return "" // file is not under the declared module dir
+	}
+
+	// Derive the GitHub repository base URL from the module path.
+	ghBase := ""
+	if strings.HasPrefix(mod.Path, "github.com/") {
+		// Direct github.com module: take owner/repo (first two components),
+		// discarding any major-version suffix (e.g. "/v2").
+		parts := strings.SplitN(strings.TrimPrefix(mod.Path, "github.com/"), "/", 3)
+		if len(parts) >= 2 {
+			ghBase = "https://github.com/" + parts[0] + "/" + parts[1]
+		}
+	} else {
+		for _, vp := range vanityPrefixes {
+			if strings.HasPrefix(mod.Path, vp.vanity) {
+				repo := strings.SplitN(strings.TrimPrefix(mod.Path, vp.vanity), "/", 2)[0]
+				ghBase = "https://" + vp.github + repo
+				break
+			}
+		}
+	}
+
+	if ghBase == "" {
+		return ""
+	}
+
+	return fmt.Sprintf("%s/blob/%s/%s#L%d", ghBase, versionToRef(mod.Version), relFile, line)
+}
+
+// versionToRef converts a Go module version string to the git ref used in a
+// GitHub blob URL.
+//
+//   - Tagged releases (v1.2.3, v2.0.0-alpha.1) → used as-is.
+//   - Pseudo-versions (v0.0.0-YYYYMMDDHHMMSS-<12-char-hash>) → the 12-character
+//     commit hash is extracted and used as the ref, since no tag exists.
+func versionToRef(version string) string {
+	parts := strings.Split(version, "-")
+	if len(parts) >= 3 {
+		hash := parts[len(parts)-1]
+		if len(hash) == 12 {
+			return hash
+		}
+	}
+	return version
+}
+
 // resolveType resolves an ast.Expr to a type name and decorators.
 func resolveType(
 	expr ast.Expr,
@@ -326,12 +454,13 @@ func buildImportMap(file *ast.File) map[string]string {
 	return importMap
 }
 
-func makeFieldInfo(fieldName, fieldType, fieldPkg string, decorators []string, fieldDoc string) FieldInfo {
+func makeFieldInfo(fieldName, fieldType, fieldPkg string, decorators []string, fieldDoc, sourceURL string) FieldInfo {
 	return FieldInfo{
 		FieldName:       fieldName,
 		TypeName:        fieldType,
 		Package:         fieldPkg,
 		TypeDecorators:  decorators,
+		SourceURL:       sourceURL,
 		DocString:       fieldDoc,
 		ParsedDocString: *parseGoDocString(fieldDoc),
 	}
@@ -344,6 +473,9 @@ func processStruct(
 	files []*ast.File,
 	pkgImportPath string,
 	externalPkgs map[string]bool,
+	fset *token.FileSet,
+	mod moduleInfo,
+	sourceURLBase string,
 ) error {
 	klog.V(2).Infof("processing struct %s", typeInfo.TypeName)
 	file := findFileForTypeSpec(typeSpec, files)
@@ -387,6 +519,15 @@ func processStruct(
 				fieldDoc = strings.TrimSpace(field.Doc.Text())
 			}
 
+			pos := fset.Position(field.Pos())
+			sourceURL := githubSourceURL(mod, pos.Filename, pos.Line)
+			if sourceURL == "" && sourceURLBase != "" && mod.Dir != "" {
+				relFile := strings.TrimPrefix(pos.Filename, mod.Dir+"/")
+				if relFile != pos.Filename {
+					sourceURL = fmt.Sprintf("%s/%s#L%d", strings.TrimRight(sourceURLBase, "/"), relFile, pos.Line)
+				}
+			}
+
 			if len(field.Names) > 0 {
 				for _, name := range field.Names {
 					if !ast.IsExported(name.Name) {
@@ -394,13 +535,13 @@ func processStruct(
 						continue
 					}
 					klog.V(2).Infof("found exported field: %s %s", name.Name, fieldType)
-					typeInfo.Fields = append(typeInfo.Fields, makeFieldInfo(name.Name, fieldType, fieldPkg, decorators, fieldDoc))
+					typeInfo.Fields = append(typeInfo.Fields, makeFieldInfo(name.Name, fieldType, fieldPkg, decorators, fieldDoc, sourceURL))
 				}
 			} else { // Embedded field
 				klog.V(2).Infof("found embedded field of type: %s", fieldType)
 				parts := strings.Split(fieldType, ".")
 				fieldName := parts[len(parts)-1]
-				typeInfo.Fields = append(typeInfo.Fields, makeFieldInfo(fieldName, fieldType, fieldPkg, decorators, fieldDoc))
+				typeInfo.Fields = append(typeInfo.Fields, makeFieldInfo(fieldName, fieldType, fieldPkg, decorators, fieldDoc, sourceURL))
 			}
 		}
 	}
@@ -630,7 +771,7 @@ func parseGoFiles(pkgDir string) ([]*ast.File, *token.FileSet, error) {
 	return files, fset, nil
 }
 
-func parsePackage(pkgDir string, allTypes map[string]TypeInfo) (map[string]bool, error) {
+func parsePackage(pkgDir string, allTypes map[string]TypeInfo, sourceURLBase string) (map[string]bool, error) {
 	pkgImportPath, err := getPkgPathFromDir(pkgDir)
 	if err != nil {
 		klog.V(2).Infof("Skipping directory %s, not a Go package: %v", pkgDir, err)
@@ -662,8 +803,13 @@ func parsePackage(pkgDir string, allTypes map[string]TypeInfo) (map[string]bool,
 		}
 	}
 
+	mod, err := getModuleInfo(pkgDir)
+	if err != nil {
+		klog.V(2).Infof("could not get module info for %s: %v", pkgDir, err)
+	}
+
 	for _, t := range docPkg.Types {
-		processType(t, pkgImportPath, allTypes, files, externalPkgs, docPkg)
+		processType(t, pkgImportPath, allTypes, files, externalPkgs, docPkg, fset, mod, sourceURLBase)
 	}
 
 	return externalPkgs, nil
@@ -676,6 +822,9 @@ func processType(
 	files []*ast.File,
 	externalPkgs map[string]bool,
 	docPkg *doc.Package,
+	fset *token.FileSet,
+	mod moduleInfo,
+	sourceURLBase string,
 ) {
 	klog.V(2).Infof("found type: %s", t.Name)
 	typeSpec, ok := t.Decl.Specs[0].(*ast.TypeSpec)
@@ -709,7 +858,7 @@ func processType(
 	switch spec := typeSpec.Type.(type) {
 	case *ast.StructType:
 		klog.V(2).Infof("type %s is a struct", qualifiedTypeName)
-		if err := processStruct(&typeInfo, typeSpec, spec, files, pkgImportPath, externalPkgs); err != nil {
+		if err := processStruct(&typeInfo, typeSpec, spec, files, pkgImportPath, externalPkgs, fset, mod, sourceURLBase); err != nil {
 			klog.V(2).Infof("Error processing struct %s: %v", qualifiedTypeName, err)
 			return
 		}

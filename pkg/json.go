@@ -27,6 +27,10 @@ type FieldInfo struct {
 	Package        string   `json:"package"`
 	TypeDecorators []string `json:"typeDecorators"`
 
+	// SourceURL is a direct link to the field's declaration in its public VCS
+	// host (e.g. a GitHub blob URL). Empty for local or private modules.
+	SourceURL string `json:"sourceURL,omitempty"`
+
 	DocString       string      `json:"docString"`
 	ParsedDocString GoDocString `json:"parsedDocString"`
 }

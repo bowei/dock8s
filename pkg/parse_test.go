@@ -517,6 +517,113 @@ const (
 	}
 }
 
+func TestVersionToRef(t *testing.T) {
+	tests := []struct {
+		version string
+		want    string
+	}{
+		{"v1.2.3", "v1.2.3"},
+		{"v2.0.0-alpha.1", "v2.0.0-alpha.1"},                         // pre-release, not pseudo-version
+		{"v0.0.0-20231010123456-abcdef012345", "abcdef012345"},        // pseudo-version → commit hash
+		{"v0.0.0-20200101000000-123456789012", "123456789012"},        // pseudo-version → commit hash
+	}
+	for _, tt := range tests {
+		got := versionToRef(tt.version)
+		if got != tt.want {
+			t.Errorf("versionToRef(%q) = %q, want %q", tt.version, got, tt.want)
+		}
+	}
+}
+
+func TestGithubSourceURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		mod     moduleInfo
+		absFile string
+		line    int
+		want    string
+	}{
+		{
+			name:    "direct github.com module",
+			mod:     moduleInfo{Path: "github.com/foo/bar", Version: "v1.2.3", Dir: "/mod/github.com/foo/bar"},
+			absFile: "/mod/github.com/foo/bar/pkg/types.go",
+			line:    42,
+			want:    "https://github.com/foo/bar/blob/v1.2.3/pkg/types.go#L42",
+		},
+		{
+			name:    "github.com module with major version suffix strips /vN from repo",
+			mod:     moduleInfo{Path: "github.com/foo/bar/v2", Version: "v2.1.0", Dir: "/mod/github.com/foo/bar/v2"},
+			absFile: "/mod/github.com/foo/bar/v2/pkg/types.go",
+			line:    10,
+			want:    "https://github.com/foo/bar/blob/v2.1.0/pkg/types.go#L10",
+		},
+		{
+			name:    "k8s.io vanity domain",
+			mod:     moduleInfo{Path: "k8s.io/api", Version: "v0.28.0", Dir: "/mod/k8s.io/api"},
+			absFile: "/mod/k8s.io/api/core/v1/types.go",
+			line:    100,
+			want:    "https://github.com/kubernetes/api/blob/v0.28.0/core/v1/types.go#L100",
+		},
+		{
+			name:    "sigs.k8s.io vanity domain",
+			mod:     moduleInfo{Path: "sigs.k8s.io/gateway-api", Version: "v1.0.0", Dir: "/mod/sigs.k8s.io/gateway-api"},
+			absFile: "/mod/sigs.k8s.io/gateway-api/apis/v1/types.go",
+			line:    50,
+			want:    "https://github.com/kubernetes-sigs/gateway-api/blob/v1.0.0/apis/v1/types.go#L50",
+		},
+		{
+			name:    "golang.org/x vanity domain",
+			mod:     moduleInfo{Path: "golang.org/x/net", Version: "v0.15.0", Dir: "/mod/golang.org/x/net"},
+			absFile: "/mod/golang.org/x/net/http2/h2c.go",
+			line:    1,
+			want:    "https://github.com/golang/net/blob/v0.15.0/http2/h2c.go#L1",
+		},
+		{
+			name:    "pseudo-version uses commit hash as ref",
+			mod:     moduleInfo{Path: "github.com/foo/bar", Version: "v0.0.0-20231010123456-abcdef012345", Dir: "/mod/github.com/foo/bar"},
+			absFile: "/mod/github.com/foo/bar/foo.go",
+			line:    7,
+			want:    "https://github.com/foo/bar/blob/abcdef012345/foo.go#L7",
+		},
+		{
+			name:    "unknown domain returns empty string",
+			mod:     moduleInfo{Path: "example.com/private/repo", Version: "v1.0.0", Dir: "/mod/example.com/private/repo"},
+			absFile: "/mod/example.com/private/repo/main.go",
+			line:    1,
+			want:    "",
+		},
+		{
+			name:    "empty version (local/main module) returns empty string",
+			mod:     moduleInfo{Path: "github.com/foo/bar", Version: "", Dir: "/mod/github.com/foo/bar"},
+			absFile: "/mod/github.com/foo/bar/main.go",
+			line:    1,
+			want:    "",
+		},
+		{
+			name:    "empty dir returns empty string",
+			mod:     moduleInfo{Path: "github.com/foo/bar", Version: "v1.0.0", Dir: ""},
+			absFile: "/mod/github.com/foo/bar/main.go",
+			line:    1,
+			want:    "",
+		},
+		{
+			name:    "file outside module dir returns empty string",
+			mod:     moduleInfo{Path: "github.com/foo/bar", Version: "v1.0.0", Dir: "/mod/github.com/foo/bar"},
+			absFile: "/other/path/main.go",
+			line:    1,
+			want:    "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := githubSourceURL(tt.mod, tt.absFile, tt.line)
+			if got != tt.want {
+				t.Errorf("githubSourceURL() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestProcessStruct(t *testing.T) {
 	src := `
 package test
@@ -589,7 +696,7 @@ type K8sResource struct {
 		TypeName: "MyStruct",
 	}
 
-	err = processStruct(&typeInfo, typeSpec, structType, files, "test", externalPkgs)
+	err = processStruct(&typeInfo, typeSpec, structType, files, "test", externalPkgs, fset, moduleInfo{}, "")
 	if err != nil {
 		t.Fatalf("processStruct failed: %v", err)
 	}
@@ -713,7 +820,7 @@ type K8sResource struct {
 		TypeName: "K8sResource",
 	}
 
-	err = processStruct(&typeInfo, typeSpec, structType, files, "test", externalPkgs)
+	err = processStruct(&typeInfo, typeSpec, structType, files, "test", externalPkgs, fset, moduleInfo{}, "")
 	if err != nil {
 		t.Fatalf("processStruct for K8sResource failed: %v", err)
 	}
@@ -799,7 +906,7 @@ go 1.18
 	}
 
 	allTypes := make(map[string]TypeInfo)
-	externalPkgs, err := parsePackage(pkgDir, allTypes)
+	externalPkgs, err := parsePackage(pkgDir, allTypes, "")
 	if err != nil {
 		t.Fatalf("parsePackage failed: %v", err)
 	}
@@ -873,7 +980,7 @@ type SimpleAlias int
 	pkgImportPath := "example.com/test"
 
 	for _, typ := range docPkg.Types {
-		processType(typ, pkgImportPath, allTypes, files, externalPkgs, docPkg)
+		processType(typ, pkgImportPath, allTypes, files, externalPkgs, docPkg, fset, moduleInfo{}, "")
 	}
 
 	// 1. Check that struct and enum were processed
@@ -924,7 +1031,7 @@ type SimpleAlias int
 	modifiedTypeInfo.DocString = "modified"
 	allTypes["example.com/test.MyStruct"] = modifiedTypeInfo
 
-	processType(myStructType, pkgImportPath, allTypes, files, externalPkgs, docPkg)
+	processType(myStructType, pkgImportPath, allTypes, files, externalPkgs, docPkg, fset, moduleInfo{}, "")
 
 	if allTypes["example.com/test.MyStruct"].DocString != "modified" {
 		t.Error("processType should have skipped reprocessing an existing type")
@@ -1028,7 +1135,7 @@ func TestBuildImportMap_Empty(t *testing.T) {
 func TestMakeFieldInfo(t *testing.T) {
 	decorators := []string{"Ptr", "List"}
 	doc := "some doc"
-	got := makeFieldInfo("MyField", "pkg.MyType", "pkg", decorators, doc)
+	got := makeFieldInfo("MyField", "pkg.MyType", "pkg", decorators, doc, "")
 
 	want := FieldInfo{
 		FieldName:      "MyField",
@@ -1048,7 +1155,7 @@ func TestMakeFieldInfo(t *testing.T) {
 }
 
 func TestMakeFieldInfo_NilDecorators(t *testing.T) {
-	got := makeFieldInfo("F", "string", "", nil, "")
+	got := makeFieldInfo("F", "string", "", nil, "", "")
 	if got.TypeDecorators != nil {
 		t.Errorf("expected nil TypeDecorators, got %v", got.TypeDecorators)
 	}
@@ -1321,7 +1428,7 @@ func TestProcessStruct_FileNotFound(t *testing.T) {
 	typeInfo := TypeInfo{Package: "p", TypeName: "A"}
 
 	// Pass an empty file list so findFileForTypeSpec returns nil → error path.
-	err = processStruct(&typeInfo, typeSpec, structType, nil, "p", make(map[string]bool))
+	err = processStruct(&typeInfo, typeSpec, structType, nil, "p", make(map[string]bool), token.NewFileSet(), moduleInfo{}, "")
 	if err == nil {
 		t.Error("processStruct should return error when file not found")
 	}
@@ -1354,7 +1461,7 @@ func TestParsePackage_EmptyDir(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	allTypes := make(map[string]TypeInfo)
-	externalPkgs, err := parsePackage(dir, allTypes)
+	externalPkgs, err := parsePackage(dir, allTypes, "")
 	// Should gracefully return nil, nil (not a Go package).
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -1425,7 +1532,7 @@ type Pkg2Struct struct {
 	}
 
 	// 4. Call ParsePackages
-	allTypes, err := ParsePackages([]string{pkg1Dir, pkg2Dir})
+	allTypes, err := ParsePackages([]string{pkg1Dir, pkg2Dir}, ParseOptions{})
 	if err != nil {
 		t.Fatalf("ParsePackages failed: %v", err)
 	}

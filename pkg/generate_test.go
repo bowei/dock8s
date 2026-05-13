@@ -297,7 +297,7 @@ func TestProcessType_ProcessStructError(t *testing.T) {
 	// Pass nil files so findFileForTypeSpec returns nil, making processStruct fail.
 	// processType should log the error and NOT add the type to allTypes.
 	for _, typ := range docPkg.Types {
-		processType(typ, "example.com/p", allTypes, nil, externalPkgs, docPkg)
+		processType(typ, "example.com/p", allTypes, nil, externalPkgs, docPkg, token.NewFileSet(), moduleInfo{}, "")
 	}
 	if len(allTypes) != 0 {
 		t.Errorf("expected no types added when processStruct fails, got %d", len(allTypes))

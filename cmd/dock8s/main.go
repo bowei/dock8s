@@ -20,6 +20,7 @@ func main() {
 	startType := flag.String("type", "k8s.io/api/core/v1.Pod", "initial type to display")
 	serve := flag.Bool("serve", false, "serve API docs on localhost:8080, watching for changes (source directories are positional args)")
 	generateDir := flag.String("generate", "", "generate API docs website to this directory (source directories are positional args)")
+	sourceURLBase := flag.String("source-url-base", "", "fallback GitHub blob URL base for source links, e.g. https://github.com/org/repo/blob/main")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Generate Go API documentation.\n\n")
@@ -53,7 +54,7 @@ func main() {
 			flag.Usage()
 			os.Exit(1)
 		}
-		allTypes, err := pkg.ParsePackages(args)
+		allTypes, err := pkg.ParsePackages(args, pkg.ParseOptions{SourceURLBase: *sourceURLBase})
 		if err != nil {
 			klog.Fatalf("Error parsing packages: %v", err)
 		}
@@ -75,7 +76,7 @@ func main() {
 	klog.V(2).Infof("[flag] -type=%v", *startType)
 	klog.V(2).Infof("[flag] packages=%v", args)
 
-	allTypes, err := pkg.ParsePackages(args)
+	allTypes, err := pkg.ParsePackages(args, pkg.ParseOptions{SourceURLBase: *sourceURLBase})
 	if err != nil {
 		klog.Fatalf("Error parsing packages: %v", err)
 	}
