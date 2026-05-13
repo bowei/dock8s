@@ -28,11 +28,17 @@ kbd {
 }
 
 #repo-div {
-  position: fixed; 
-  bottom: 10px; 
-  right: 10px; 
-  font-family: sans-serif; 
-  font-size: 0.8em;
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: @secondary-text;
+  text-decoration: none;
+  &:hover { color: @text-color; }
+  svg { flex-shrink: 0; }
 }
 
 #main-container {
