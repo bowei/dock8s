@@ -99,6 +99,23 @@ li.selected {
   margin-left: 6pt;
   color: #52796f;
 }
+.enum-value {
+  font-size: 10pt;
+  margin-left: 6pt;
+  color: #52796f;
+}
+.source-link {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6pt;
+  color: #52796f;
+  opacity: 0.5;
+  text-decoration: none;
+  vertical-align: middle;
+}
+.source-link:hover {
+  opacity: 1;
+}
 .doc-string {
   font-size: 9pt;
   margin-top: 10pt;
