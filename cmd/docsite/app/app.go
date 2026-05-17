@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Config holds the configuration for the docsite generator.
@@ -33,19 +35,19 @@ type RepoEntry struct {
 // RepoMeta is repos/<path...>/metadata.yaml
 type RepoMeta struct {
 	// Refs are the branches and tags to generate documentation for.
-	Refs []string
+	Refs []string `yaml:"refs"`
 	// ApiDirs are the default relative paths within the repo to pass to dock8s.
 	// When empty, the repo root is used.
-	ApiDirs []string
+	ApiDirs []string `yaml:"apiDirs"`
 	// ApiDirsForRef are per-ref overrides. When a ref matches an entry here,
 	// that entry's Dirs take precedence over ApiDirs.
-	ApiDirsForRef []RefDirs
+	ApiDirsForRef []RefDirs `yaml:"apiDirsForRef"`
 }
 
 // RefDirs holds per-ref directory overrides for a single ref.
 type RefDirs struct {
-	Name string
-	Dirs []string
+	Name string   `yaml:"name"`
+	Dirs []string `yaml:"dirs"`
 }
 
 // CachePathForRef returns the local cache directory for a specific ref of this
@@ -71,64 +73,10 @@ func LoadMeta(path string) (RepoMeta, error) {
 	if err != nil {
 		return RepoMeta{}, err
 	}
-
 	var meta RepoMeta
-	// section tracks the current top-level key.
-	// subSection tracks nested state inside apiDirsForRef items.
-	section := ""
-	subSection := ""
-	// currentRefDirs accumulates the in-progress apiDirsForRef entry.
-	var currentRefDirs *RefDirs
-
-	flushRefDirs := func() {
-		if currentRefDirs != nil {
-			meta.ApiDirsForRef = append(meta.ApiDirsForRef, *currentRefDirs)
-			currentRefDirs = nil
-		}
+	if err := yaml.Unmarshal(data, &meta); err != nil {
+		return RepoMeta{}, fmt.Errorf("parsing %s: %w", path, err)
 	}
-
-	for _, line := range strings.Split(string(data), "\n") {
-		stripped := strings.TrimSpace(line)
-
-		switch {
-		case stripped == "refs:":
-			flushRefDirs()
-			section, subSection = "refs", ""
-		case stripped == "apiDirs:":
-			flushRefDirs()
-			section, subSection = "apiDirs", ""
-		case stripped == "apiDirsForRef:":
-			flushRefDirs()
-			section, subSection = "apiDirsForRef", ""
-		case stripped == "":
-			// blank lines are ignored
-		case stripped == "dirs:" && section == "apiDirsForRef":
-			subSection = "dirs"
-		case strings.HasPrefix(stripped, "- name: ") && section == "apiDirsForRef":
-			flushRefDirs()
-			currentRefDirs = &RefDirs{Name: strings.TrimPrefix(stripped, "- name: ")}
-			subSection = ""
-		case strings.HasPrefix(stripped, "- ") && section == "apiDirsForRef" && subSection == "dirs":
-			if currentRefDirs != nil {
-				currentRefDirs.Dirs = append(currentRefDirs.Dirs, strings.TrimPrefix(stripped, "- "))
-			}
-		case strings.HasPrefix(stripped, "- "):
-			val := strings.TrimPrefix(stripped, "- ")
-			switch section {
-			case "refs":
-				meta.Refs = append(meta.Refs, val)
-			case "apiDirs":
-				meta.ApiDirs = append(meta.ApiDirs, val)
-			}
-		default:
-			// Unknown top-level key (no leading whitespace, ends with ":"): reset section.
-			if strings.HasSuffix(stripped, ":") && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
-				flushRefDirs()
-				section, subSection = "", ""
-			}
-		}
-	}
-	flushRefDirs()
 	return meta, nil
 }
 
