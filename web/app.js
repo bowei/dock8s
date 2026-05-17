@@ -15,6 +15,9 @@ const searchShowAlpha = document.getElementById('search-show-alpha');
 const searchShowBeta = document.getElementById('search-show-beta');
 const helpDialogOverlay = document.getElementById('help-dialog-overlay');
 const helpDialogDialog = document.getElementById('help-dialog-dialog');
+const configDialogOverlay = document.getElementById('config-dialog-overlay');
+const configDialogDialog = document.getElementById('config-dialog-dialog');
+const configBtn = document.getElementById('config-btn');
 const helpText = document.getElementById('help-text');
 const homeLink = document.getElementById('home-link');
 
@@ -116,6 +119,14 @@ function showHelpDialog() {
 function hideHelpDialog() {
   console.log('Hiding help dialog');
   helpDialogOverlay.style.display = 'none';
+}
+
+function showConfigDialog() {
+  configDialogOverlay.style.display = 'flex';
+}
+
+function hideConfigDialog() {
+  configDialogOverlay.style.display = 'none';
 }
 
 function selectItem(li) {
@@ -237,10 +248,13 @@ function handleKeyDown(event) {
       console.log("'esc' key pressed");
       hideHelpDialog();
     }
+    if (configDialogOverlay.style.display === 'flex') {
+      hideConfigDialog();
+    }
     return;
   }
 
-  if (searchDialogOverlay.style.display === 'flex' || helpDialogOverlay.style.display === 'flex') {
+  if (searchDialogOverlay.style.display === 'flex' || helpDialogOverlay.style.display === 'flex' || configDialogOverlay.style.display === 'flex') {
     return;
   }
 
@@ -399,4 +413,16 @@ helpDialogDialog.addEventListener('click', (event) => {
 
 helpDialogOverlay.addEventListener('click', () => {
   hideHelpDialog();
+});
+
+configBtn.addEventListener('click', () => {
+  showConfigDialog();
+});
+
+configDialogDialog.addEventListener('click', (event) => {
+  event.stopPropagation();
+});
+
+configDialogOverlay.addEventListener('click', () => {
+  hideConfigDialog();
 });

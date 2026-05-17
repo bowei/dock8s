@@ -13,10 +13,17 @@ document.body.innerHTML = `
       <ul id="search-dialog-list"></ul>
     </div>
   </div>
+  <div id="config-dialog-overlay" style="display: none;">
+    <div id="config-dialog-dialog"></div>
+  </div>
   <div id="help-dialog-overlay" style="display: none;">
     <div id="help-dialog-dialog"></div>
   </div>
-  <div id="help-text"></div>
+  <div id="top-nav">
+    <a id="home-link" href="#"></a>
+    <button id="config-btn"></button>
+    <div id="help-text"></div>
+  </div>
   <select id="theme-select">
     <option value="light.css">Light</option>
   </select>
