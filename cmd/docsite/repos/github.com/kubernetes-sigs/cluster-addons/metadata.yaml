@@ -1,0 +1,11 @@
+refs:
+- master
+apiDirs:
+- coredns
+- dashboard
+- flannel
+- generic
+- installer
+- kubeproxy
+- metrics-server
+- nodelocaldns

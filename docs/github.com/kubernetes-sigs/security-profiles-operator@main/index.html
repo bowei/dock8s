@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dock8s API explorer</title>
+  <link rel="stylesheet" href="theme-brown.css">
+</head>
+
+<body>
+  <div id="top-nav">
+    <a id="home-link" href="#" aria-label="Home">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6-.002.001-.002.003A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4H2.5z"/></svg>
+    </a>
+    <button id="config-btn" aria-label="Settings">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.474l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/></svg>
+    </button>
+    <div id="help-text">
+      <kbd>/</kbd> to search <kbd>?</kbd> show help.
+    </div>
+  </div>
+
+  <a id="repo-div" href="https://github.com/bowei/dock8s" target="_blank" rel="noopener">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+    github.com/bowei/dock8s
+  </a>
+
+  <div id="main-container"></div>
+
+  <div id="search-dialog-overlay">
+    <div id="search-dialog-dialog">
+      <h2>Search</h2>
+      <input type="text" id="search-dialog-input" placeholder="Filter by name. Use `f:` to search fields by name">
+      <div id="search-dialog-options">
+        <label><input type="checkbox" id="search-show-alpha" checked>alpha</label>
+        <label><input type="checkbox" id="search-show-beta" checked>beta</label>
+        <label><input type="checkbox" id="search-show-all">ref</label>
+      </div>
+      <div id="search-dialog-status"></div>
+      <ul id="search-dialog-list"></ul>
+    </div>
+  </div>
+
+  <div id="config-dialog-overlay" style="display: none;">
+    <div id="config-dialog-dialog">
+      <div class="dialog-header">
+        <h2>Settings</h2>
+        <button id="config-close-btn" aria-label="Close settings">&times;</button>
+      </div>
+      <div class="config-row">
+        <label for="theme-select">Theme</label>
+        <select id="theme-select">
+          <option value="theme-brown.css">Brown</option>
+          <option value="theme-dark.css">Dark</option>
+          <option value="theme-blue.css">Blue</option>
+          <option value="theme-green.css">Green</option>
+          <option value="theme-light.css">Light</option>
+          <option value="theme-monokai.css">Monokai</option>
+          <option value="theme-dracula.css">Dracula</option>
+          <option value="theme-gruvbox.css">Gruvbox</option>
+          <option value="theme-github.css">GitHub</option>
+          <option value="theme-l33t.css">l33t</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="help-dialog-overlay" style="display: none;">
+    <div id="help-dialog-dialog">
+      <h2>Keyboard Shortcuts</h2>
+      <ul>
+        <li><kbd>/</kbd><span>Search for a type (prefix "f:" to search fields)</span></li>
+        <li><kbd>?</kbd><span>Show this help screen</span></li>
+        <li><kbd>↑</kbd><kbd>↓</kbd><span>Navigate items</span></li>
+        <li><kbd>→</kbd><span>View details of selected item</span></li>
+        <li><kbd>←</kbd><span>Go back to previous column</span></li>
+        <li><kbd>enter</kbd><span>Expand/collapse documentation</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script type="module" src="app.js"></script>
+
+</body>
+</html>

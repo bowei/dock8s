@@ -1,0 +1,5 @@
+refs:
+- main
+apiDirs:
+- api
+- api-hub

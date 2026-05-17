@@ -1,0 +1,5 @@
+refs:
+- main
+apiDirs:
+- pkg
+- pkg/apis
