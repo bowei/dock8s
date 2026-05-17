@@ -207,6 +207,53 @@ func TestParseGoDocString(t *testing.T) {
 			},
 		},
 		{
+			name:  "Fenced code block basic",
+			input: "```\nline one\nline two\n```",
+			expected: &GoDocString{
+				Elements: []GoDocElem{
+					{Type: GoDocCode, Content: []string{"line one\nline two"}},
+				},
+			},
+		},
+		{
+			name:  "Fenced code block with language specifier",
+			input: "```go\nfunc Foo() {}\n```",
+			expected: &GoDocString{
+				Elements: []GoDocElem{
+					{Type: GoDocCode, Content: []string{"func Foo() {}"}},
+				},
+			},
+		},
+		{
+			name:  "Fenced code block preserves blank lines inside",
+			input: "```\nfirst\n\nsecond\n```",
+			expected: &GoDocString{
+				Elements: []GoDocElem{
+					{Type: GoDocCode, Content: []string{"first\n\nsecond"}},
+				},
+			},
+		},
+		{
+			name:  "Fenced code block unclosed reaches end of input",
+			input: "```\nonly line",
+			expected: &GoDocString{
+				Elements: []GoDocElem{
+					{Type: GoDocCode, Content: []string{"only line"}},
+				},
+			},
+		},
+		{
+			name:  "Fenced code block in mixed content",
+			input: "Intro paragraph.\n\n```\ncode here\n```\n\nTrailing paragraph.",
+			expected: &GoDocString{
+				Elements: []GoDocElem{
+					{Type: GoDocParagraph, Content: []string{"Intro paragraph."}},
+					{Type: GoDocCode, Content: []string{"code here"}},
+					{Type: GoDocParagraph, Content: []string{"Trailing paragraph."}},
+				},
+			},
+		},
+		{
 			// Paragraph immediately followed by a directive (no blank line) — exercises
 			// the "+" break inside parseParagraph.
 			name:  "Paragraph then directive no blank line",

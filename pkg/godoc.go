@@ -54,6 +54,11 @@ func parseGoDocString(comment string) *GoDocString {
 			continue
 		}
 
+		if isFenceStart(line) {
+			doc.Elements = append(doc.Elements, p.parseFencedCodeBlock())
+			continue
+		}
+
 		if isListItem(line) {
 			doc.Elements = append(doc.Elements, p.parseList())
 			continue
@@ -230,6 +235,25 @@ func (p *docParser) parseList() GoDocElem {
 	}
 
 	return GoDocElem{Type: GoDocElementList, Content: items}
+}
+
+func isFenceStart(line string) bool {
+	return strings.HasPrefix(strings.TrimLeft(line, " \t"), "```")
+}
+
+func (p *docParser) parseFencedCodeBlock() GoDocElem {
+	p.pos++ // skip opening fence line
+	var content []string
+	for p.pos < len(p.lines) {
+		line := p.lines[p.pos]
+		if strings.HasPrefix(strings.TrimLeft(line, " \t"), "```") {
+			p.pos++ // skip closing fence
+			break
+		}
+		content = append(content, line)
+		p.pos++
+	}
+	return GoDocElem{Type: GoDocCode, Content: []string{strings.Join(content, "\n")}}
 }
 
 func isListItem(line string) bool {
