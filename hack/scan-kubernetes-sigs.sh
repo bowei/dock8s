@@ -66,12 +66,14 @@ check_repo() {
     return
   fi
 
-  if ! timeout 120 git clone \
+  if ! git clone \
       --depth 1 --quiet --branch "${branch}" \
       "https://github.com/kubernetes-sigs/${repo}" "${clone_dir}" 2>/dev/null; then
-    printf '[clone! ] %s\n' "${repo}"
+    printf '[clone error ] %s\n' "${repo}"
     return
   fi
+
+  printf 'Searching for API markers'
 
   # Search for Kubernetes API type markers; exclude vendor/.
   local api_files
