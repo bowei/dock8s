@@ -1,2 +1,5 @@
 refs:
 - main
+dirs:
+- api
+- apix

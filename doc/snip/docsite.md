@@ -38,11 +38,9 @@ repos/
     kubernetes/
       api/
         metadata.yaml
-        api-dirs.sh          ← optional
     kubernetes-sigs/
       gateway-api/
         metadata.yaml
-        api-dirs.sh
 ```
 
 Every **leaf directory** (one with no subdirectories) is treated as one repo
@@ -56,18 +54,8 @@ Declares which branches and tags to build:
 refs:
   - main
   - v1.28.0
-```
-
-### `api-dirs.sh` (optional)
-
-A shell script that receives the path to the cloned repo as its first argument
-and prints one subdirectory per line. Those subdirectories are passed to
-`dock8s -generate` as the source directories. If the script is absent, the
-entire repo root is used.
-
-```bash
-#!/bin/bash
-echo "apis"          # → dock8s will scan <repo>/apis/
+apiDirs:
+  - ... # list of api directories to generate
 ```
 
 ## Pipeline
@@ -80,7 +68,6 @@ For each repo the tool runs the following steps once per ref:
 3. **Checkout** — `git checkout <ref>` to switch to the target branch or tag.
 4. **Reset** — `git reset --hard origin/<ref>` to advance a branch to its
    remote tip (silently ignored for tags).
-5. **Source dirs** — run `api-dirs.sh` if present; otherwise use the repo root.
 6. **Generate** — `dock8s -generate <outDir>/<domain>/<path>@<ref> <srcDirs…>`,
    which writes a self-contained `index.html` viewer.
 7. **Index** — after all repos are processed, write `<outDir>/index.html`, a

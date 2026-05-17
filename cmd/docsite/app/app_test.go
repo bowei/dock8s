@@ -88,6 +88,34 @@ other:
 			want: RepoMeta{},
 		},
 		{
+			name: "dirs only",
+			content: `dirs:
+  - api
+  - pkg/k8s
+`,
+			want: RepoMeta{Dirs: []string{"api", "pkg/k8s"}},
+		},
+		{
+			name: "refs and dirs",
+			content: `refs:
+  - main
+  - v1.0.0
+dirs:
+  - apis
+  - extensions/api
+`,
+			want: RepoMeta{Refs: []string{"main", "v1.0.0"}, Dirs: []string{"apis", "extensions/api"}},
+		},
+		{
+			name: "dirs before refs",
+			content: `dirs:
+  - api
+refs:
+  - main
+`,
+			want: RepoMeta{Refs: []string{"main"}, Dirs: []string{"api"}},
+		},
+		{
 			name:    "file not found",
 			content: "",
 			wantErr: true,
@@ -124,6 +152,14 @@ other:
 			for i, ref := range got.Refs {
 				if ref != tt.want.Refs[i] {
 					t.Errorf("LoadMeta() refs[%d] = %q, want %q", i, ref, tt.want.Refs[i])
+				}
+			}
+			if len(got.Dirs) != len(tt.want.Dirs) {
+				t.Fatalf("LoadMeta() dirs = %v, want %v", got.Dirs, tt.want.Dirs)
+			}
+			for i, d := range got.Dirs {
+				if d != tt.want.Dirs[i] {
+					t.Errorf("LoadMeta() dirs[%d] = %q, want %q", i, d, tt.want.Dirs[i])
 				}
 			}
 		})

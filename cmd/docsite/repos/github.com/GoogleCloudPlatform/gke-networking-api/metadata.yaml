@@ -1,2 +1,4 @@
 refs:
 - main
+dirs:
+- apis

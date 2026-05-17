@@ -1,2 +1,4 @@
 refs:
 - master
+dirs:
+- apis

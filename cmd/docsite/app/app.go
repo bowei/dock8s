@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bufio"
 	"fmt"
 	"html/template"
 	"os"
@@ -35,6 +34,9 @@ type RepoEntry struct {
 type RepoMeta struct {
 	// Refs are the branches and tags to generate documentation for.
 	Refs []string
+	// Dirs are the relative paths within the repo to pass to dock8s.
+	// When empty, the repo root is used.
+	Dirs []string
 }
 
 // CachePathForRef returns the local cache directory for a specific ref of this
@@ -50,6 +52,9 @@ func (r RepoEntry) CachePathForRef(cacheDir, ref string) string {
 //	refs:
 //	  - branch-or-tag
 //	  - another-ref
+//	dirs:
+//	  - relative/path
+//	  - another/path
 func LoadMeta(path string) (RepoMeta, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -57,19 +62,27 @@ func LoadMeta(path string) (RepoMeta, error) {
 	}
 
 	var meta RepoMeta
-	inRefs := false
+	section := ""
 	for _, line := range strings.Split(string(data), "\n") {
 		stripped := strings.TrimSpace(line)
 		if stripped == "refs:" {
-			inRefs = true
+			section = "refs"
 			continue
 		}
-		if inRefs {
-			if strings.HasPrefix(stripped, "- ") {
-				meta.Refs = append(meta.Refs, strings.TrimSpace(strings.TrimPrefix(stripped, "- ")))
-			} else if stripped != "" {
-				inRefs = false
+		if stripped == "dirs:" {
+			section = "dirs"
+			continue
+		}
+		if strings.HasPrefix(stripped, "- ") {
+			val := strings.TrimSpace(strings.TrimPrefix(stripped, "- "))
+			switch section {
+			case "refs":
+				meta.Refs = append(meta.Refs, val)
+			case "dirs":
+				meta.Dirs = append(meta.Dirs, val)
 			}
+		} else if stripped != "" {
+			section = ""
 		}
 	}
 	return meta, nil
@@ -185,8 +198,8 @@ func CheckoutRef(cfg Config, r RepoEntry, ref string) error {
 // GenerateDocsForRepo generates documentation for all refs of a repo.
 //
 // For each ref it:
-//  1. Determines the source directories via repos/<path>/api-dirs.sh, or
-//     falls back to the repo root if the script is absent.
+//  1. Determines the source directories from Meta.Dirs, or falls back to
+//     the repo root if Dirs is empty.
 //  2. Runs dock8s -generate <outDir>/<path>@<ref> <dirs...>.
 //
 // CheckoutRef must be called for each ref before this function.
@@ -199,19 +212,10 @@ func GenerateDocsForRepo(cfg Config, r RepoEntry) error {
 		dest := r.CachePathForRef(cfg.CacheDir, ref)
 
 		// Determine the source directories.
-		apiDirsScript := filepath.Join(cfg.ReposDir, filepath.FromSlash(repoRelPath), "api-dirs.sh")
 		var srcDirs []string
-		if _, err := os.Stat(apiDirsScript); err == nil {
-			out, err := exec.Command(apiDirsScript, dest).Output()
-			if err != nil {
-				return fmt.Errorf("api-dirs.sh for %s@%s: %w", r.URL, ref, err)
-			}
-			scanner := bufio.NewScanner(strings.NewReader(string(out)))
-			for scanner.Scan() {
-				line := strings.TrimSpace(scanner.Text())
-				if line != "" {
-					srcDirs = append(srcDirs, filepath.Join(dest, line))
-				}
+		if len(r.Meta.Dirs) > 0 {
+			for _, d := range r.Meta.Dirs {
+				srcDirs = append(srcDirs, filepath.Join(dest, d))
 			}
 		} else {
 			srcDirs = []string{dest}
