@@ -219,8 +219,8 @@ func (p *docParser) parseList() GoDocElem {
 			nextIndent := len(nextLine) - len(nextTrimmed)
 
 			if nextIndent >= textIndent {
-				currentItem.WriteString("\n")
-				currentItem.WriteString(nextLine[textIndent:])
+				currentItem.WriteString(" ")
+				currentItem.WriteString(strings.TrimSpace(nextLine[textIndent:]))
 				p.pos++
 			} else {
 				break

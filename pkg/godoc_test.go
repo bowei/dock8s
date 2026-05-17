@@ -160,7 +160,26 @@ func TestParseGoDocString(t *testing.T) {
 			input: "* item 1\n  more text for item 1\n* item 2",
 			expected: &GoDocString{
 				Elements: []GoDocElem{
-					{Type: GoDocElementList, Content: []string{"item 1\nmore text for item 1", "item 2"}},
+					{Type: GoDocElementList, Content: []string{"item 1 more text for item 1", "item 2"}},
+				},
+			},
+		},
+		{
+			// Mirrors the real-world godoc pattern from gateway-api: each bullet
+			// spans multiple source lines that should be reflowed into one string.
+			name: "List with wrapped lines joins into single item text",
+			input: "- Core: Filter types and their corresponding configuration defined by\n" +
+				"  \"Support: Core\" in this package, e.g. \"RequestHeaderModifier\". All\n" +
+				"  implementations must support core filters.\n" +
+				"- Extended: Filter types and their corresponding configuration defined by\n" +
+				"  \"Support: Extended\" in this package, e.g. \"RequestMirror\". Implementers\n" +
+				"  are encouraged to support extended filters.",
+			expected: &GoDocString{
+				Elements: []GoDocElem{
+					{Type: GoDocElementList, Content: []string{
+						`Core: Filter types and their corresponding configuration defined by "Support: Core" in this package, e.g. "RequestHeaderModifier". All implementations must support core filters.`,
+						`Extended: Filter types and their corresponding configuration defined by "Support: Extended" in this package, e.g. "RequestMirror". Implementers are encouraged to support extended filters.`,
+					}},
 				},
 			},
 		},
