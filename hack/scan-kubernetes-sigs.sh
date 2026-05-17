@@ -32,9 +32,19 @@ trap cleanup EXIT
 
 # find_api_dirs: reads Go file paths (one per line) from stdin; outputs
 # deduplicated apiDir candidates based on top-level directory patterns.
+#
+# Many repos (e.g. cluster-api) have API markers in test fixtures, internal
+# packages, and controller code as well as the real public API directory.
+# We filter out paths that are clearly non-API before inferring the dir:
+#   - paths starting with a known non-API component (test/, internal/, etc.)
+#   - paths containing /test/ or /testdata/ anywhere
+#   - Go test files (*_test.go)
 find_api_dirs() {
+  grep -v -E \
+    '^(test|testdata|internal|util|cmd|controllers|bootstrap|hack|docs|config|scripts|e2e|vendor)/' |
+  grep -v -E '/(test|testdata|e2e)/' |
+  grep -v '_test\.go$' |
   awk -F/ '
-    /^vendor\// { next }
     {
       root = $1
       # For files at repo root (NF==1), $1 is the filename itself; skip.
