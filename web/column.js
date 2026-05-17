@@ -54,16 +54,6 @@ export function createColumn(typeName, typeData, onFieldClick, expandedDocString
       fieldType.className = 'field-type';
 
       line1.appendChild(fieldName);
-
-      const attrs = extractFieldAttributes(field.parsedDocString);
-      attrs.forEach(attr => {
-        const cfg = FIELD_ATTRIBUTE_CONFIG[attr];
-        const lozenge = document.createElement('span');
-        lozenge.className = `field-attr ${cfg.cssClass}`;
-        lozenge.textContent = cfg.label;
-        line1.appendChild(lozenge);
-      });
-
       line1.appendChild(fieldType);
 
       if (field.sourceURL) {
@@ -83,6 +73,20 @@ export function createColumn(typeName, typeData, onFieldClick, expandedDocString
       const contentWrapper = document.createElement('div');
       contentWrapper.appendChild(line1);
       contentWrapper.appendChild(line2);
+
+      const attrs = extractFieldAttributes(field.parsedDocString);
+      if (attrs.length > 0) {
+        const attrLine = document.createElement('div');
+        attrLine.className = 'field-attrs';
+        attrs.forEach(attr => {
+          const cfg = FIELD_ATTRIBUTE_CONFIG[attr];
+          const lozenge = document.createElement('span');
+          lozenge.className = `field-attr ${cfg.cssClass}`;
+          lozenge.textContent = cfg.label;
+          attrLine.appendChild(lozenge);
+        });
+        contentWrapper.appendChild(attrLine);
+      }
       if (field.docString) {
         const expandKey = typeName + '.' + field.fieldName;
         const docStringEl = createDocString(field.parsedDocString);
