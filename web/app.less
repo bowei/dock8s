@@ -243,6 +243,27 @@ li.selected .chevron::after {
   border-radius: 4px;
 }
 
+#search-dialog-options {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+  font-size: 0.85em;
+  color: @secondary-text;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    user-select: none;
+
+    input[type="checkbox"] {
+      accent-color: @text-color;
+      cursor: pointer;
+    }
+  }
+}
+
 #search-dialog-list {
   list-style-type: none;
   padding: 0;
