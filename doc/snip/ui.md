@@ -70,18 +70,19 @@ If the hash is empty, the search dialog is opened automatically.
 Press `/` (or click the help text in the top bar) to open the search dialog.
 See [search.md](search.md) for full details. In summary:
 
-- **Type search** (default): filter root types by name; selecting one opens it
-  as the first column. By default only types from the source directories are
-  shown; checking **Include dependency APIs** reveals all root types.
+- **Type search** (default): filter root types by short name. Three checkboxes
+  refine the set: **alpha** and **beta** (both checked by default) hide types
+  from packages with those strings in their path; **ref** (unchecked by default)
+  expands the results to include transitive dependency types.
 - **Field search** (`f:` prefix): search field names across all types reachable
   from root types; selecting a result restores the full column path to that
-  field. Respects the same source-directory filter as type search.
+  field. The same **alpha**, **beta**, and **ref** checkboxes apply.
 
 ## Themes
 
-A dropdown in the top bar switches between five visual themes (light, dark,
-blue, green, brown). The selection is saved to `localStorage` and restored on
-the next visit.
+A dropdown in the top bar switches between ten visual themes (Brown, Dark,
+Blue, Green, Light, Monokai, Dracula, Gruvbox, GitHub, l33t). The selection is
+saved to `localStorage` and restored on the next visit.
 
 ## Live reload
 

@@ -7,9 +7,9 @@
 
 ## Dialog behavior
 
-- Opens an overlay with a text input, an **Include dependency APIs** checkbox, a status
-  line, and a scrollable results list
-- The input is auto-focused on open; the checkbox resets to unchecked on each open
+- Opens an overlay with a text input, three filter checkboxes (**alpha**, **beta**, **ref**),
+  a status line, and a scrollable results list
+- The input is auto-focused on open; checkbox state persists across opens
 - Pressing `Escape` or clicking outside the dialog closes it and clears the input and status
 
 ## Search modes
@@ -21,13 +21,19 @@ The mode is determined by the prefix of the input value.
 With no prefix, the dialog searches root types — types that have `TypeMeta`+`ObjectMeta`
 (i.e. top-level Kubernetes resources), or whose names end in `Request`/`Response`.
 
-By default only types from the source directories passed to `-serve` or `-generate`
-(and their subdirectories) are shown. Checking **Include dependency APIs** in the dialog
-shows all root types, including those pulled in as transitive dependencies.
+Three checkboxes filter the result set:
 
-- Filters by case-insensitive substring match against the fully-qualified type name
-- Results are sorted alphabetically by short name (the part after the last `.`), with the
-  full qualified name as a tiebreaker
+- **alpha** (checked by default): when unchecked, hides types from packages whose path
+  contains the string `alpha`
+- **beta** (checked by default): when unchecked, hides types from packages whose path
+  contains the string `beta`
+- **ref** (unchecked by default): when unchecked, only shows types from the source
+  directories passed to `-serve` or `-generate` (and their subdirectories); when checked,
+  shows all root types including those pulled in as transitive dependencies
+
+- Filters by case-insensitive substring match against the short type name
+- Results are sorted alphabetically by short name, with the fully-qualified name as a
+  tiebreaker
 - Each result shows the short type name and its package path
 - No result cap; all matching root types are shown
 
@@ -35,8 +41,8 @@ shows all root types, including those pulled in as transitive dependencies.
 
 Typing `f:` followed by a filter string searches field names across all types reachable
 from any root type via field references. Non-reachable (orphan) types are excluded. The
-same **Include dependency APIs** checkbox controls whether the search starts only from
-source-directory root types or from all root types.
+**alpha**, **beta**, and **ref** checkboxes control which root types the search starts from,
+using the same logic as type search.
 
 - Filters field names by case-insensitive substring match
 - Each result represents a specific path from a root type down to the matching field
