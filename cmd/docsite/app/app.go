@@ -1,22 +1,25 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Config holds the configuration for the docsite generator.
 type Config struct {
-	ReposDir  string
-	OutDir    string
-	CacheDir  string
-	Dock8sBin string
+	ReposDir    string
+	OutDir      string
+	CacheDir    string
+	Dock8sBin   string
+	Parallelism int
 }
 
 // RepoEntry represents a repo to generate documentation for.
@@ -48,6 +51,38 @@ type RepoMeta struct {
 type RefDirs struct {
 	Name string   `yaml:"name"`
 	Dirs []string `yaml:"dirs"`
+}
+
+// repoRef is a (repo, ref) work unit used when parallelizing operations.
+type repoRef struct {
+	repo RepoEntry
+	ref  string
+}
+
+// runParallel runs fn on each item with up to parallelism concurrent goroutines.
+// All items are processed; errors from failed items are joined and returned.
+func runParallel[T any](items []T, parallelism int, fn func(T) error) error {
+	sem := make(chan struct{}, parallelism)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var errs []error
+
+	for _, item := range items {
+		item := item
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			if err := fn(item); err != nil {
+				mu.Lock()
+				errs = append(errs, err)
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	return errors.Join(errs...)
 }
 
 // CachePathForRef returns the local cache directory for a specific ref of this
@@ -200,51 +235,38 @@ func CheckoutRef(cfg Config, r RepoEntry, ref string) error {
 	return nil
 }
 
-// GenerateDocsForRepo generates documentation for all refs of a repo.
+// generateDocsForRef generates documentation for a single (repo, ref) pair.
 //
-// For each ref it:
-//  1. Determines the source directories from Meta.Dirs, or falls back to
-//     the repo root if Dirs is empty.
-//  2. Runs dock8s -generate <outDir>/<path>@<ref> <dirs...>.
-//
-// CheckoutRef must be called for each ref before this function.
-func GenerateDocsForRepo(cfg Config, r RepoEntry) error {
+// It determines the source directories from Meta, then runs dock8s.
+// CheckoutRef must be called for this ref before calling this function.
+func generateDocsForRef(cfg Config, r RepoEntry, ref string) error {
 	repoRelPath := strings.TrimPrefix(r.URL, "https://")
+	fmt.Printf("\n  [%s @ %s]\n", r.URL, ref)
 
-	for _, ref := range r.Meta.Refs {
-		fmt.Printf("\n  [%s @ %s]\n", r.URL, ref)
+	dest := r.CachePathForRef(cfg.CacheDir, ref)
 
-		dest := r.CachePathForRef(cfg.CacheDir, ref)
-
-		// Determine the source directories.
-		var srcDirs []string
-		if dirs := DirsForRef(r.Meta, ref); len(dirs) > 0 {
-			for _, d := range dirs {
-				srcDirs = append(srcDirs, filepath.Join(dest, d))
-			}
-		} else {
-			srcDirs = []string{dest}
+	var srcDirs []string
+	if dirs := DirsForRef(r.Meta, ref); len(dirs) > 0 {
+		for _, d := range dirs {
+			srcDirs = append(srcDirs, filepath.Join(dest, d))
 		}
+	} else {
+		srcDirs = []string{dest}
+	}
 
-		// Run dock8s to generate the documentation website.
-		// Pass -source-url-base so dock8s can generate per-field source links
-		// even for local checkouts (which have no module version).
-		// Pass -home-url with a relative path back to the docsite index so the
-		// generated site shows a home link.
-		generateDest := filepath.Join(cfg.OutDir, repoRelPath+"@"+ref)
-		sourceURLBase := r.URL + "/blob/" + ref
-		absOutDir, _ := filepath.Abs(cfg.OutDir)
-		absGenerateDest, _ := filepath.Abs(generateDest)
-		relToRoot, _ := filepath.Rel(absGenerateDest, absOutDir)
-		homeURL := filepath.ToSlash(relToRoot) + "/"
-		args := append([]string{"-generate", generateDest, "-source-url-base", sourceURLBase, "-home-url", homeURL}, srcDirs...)
-		fmt.Printf("  running: %s %s\n", cfg.Dock8sBin, strings.Join(args, " "))
-		dock8sCmd := exec.Command(cfg.Dock8sBin, args...)
-		dock8sCmd.Stdout = os.Stdout
-		dock8sCmd.Stderr = os.Stderr
-		if err := dock8sCmd.Run(); err != nil {
-			return fmt.Errorf("dock8s generate for %s@%s: %w", r.URL, ref, err)
-		}
+	generateDest := filepath.Join(cfg.OutDir, repoRelPath+"@"+ref)
+	sourceURLBase := r.URL + "/blob/" + ref
+	absOutDir, _ := filepath.Abs(cfg.OutDir)
+	absGenerateDest, _ := filepath.Abs(generateDest)
+	relToRoot, _ := filepath.Rel(absGenerateDest, absOutDir)
+	homeURL := filepath.ToSlash(relToRoot) + "/"
+	args := append([]string{"-generate", generateDest, "-source-url-base", sourceURLBase, "-home-url", homeURL}, srcDirs...)
+	fmt.Printf("  running: %s %s\n", cfg.Dock8sBin, strings.Join(args, " "))
+	dock8sCmd := exec.Command(cfg.Dock8sBin, args...)
+	dock8sCmd.Stdout = os.Stdout
+	dock8sCmd.Stderr = os.Stderr
+	if err := dock8sCmd.Run(); err != nil {
+		return fmt.Errorf("dock8s generate for %s@%s: %w", r.URL, ref, err)
 	}
 	return nil
 }
@@ -406,20 +428,26 @@ func Run(cfg Config) error {
 		fmt.Printf("  %s  refs: %v\n", r.URL, r.Meta.Refs)
 	}
 
-	fmt.Printf("\nChecking out repos into %s\n", cfg.CacheDir)
+	// Flatten repos × refs into individual work units.
+	var pairs []repoRef
 	for _, r := range repos {
 		for _, ref := range r.Meta.Refs {
-			if err := CheckoutRef(cfg, r, ref); err != nil {
-				return fmt.Errorf("checkout failed: %w", err)
-			}
+			pairs = append(pairs, repoRef{r, ref})
 		}
 	}
 
-	fmt.Printf("\nGenerating documentation into %s\n", cfg.OutDir)
-	for _, r := range repos {
-		if err := GenerateDocsForRepo(cfg, r); err != nil {
-			return fmt.Errorf("generate failed: %w", err)
-		}
+	fmt.Printf("\nChecking out repos into %s (parallelism=%d)\n", cfg.CacheDir, cfg.Parallelism)
+	if err := runParallel(pairs, cfg.Parallelism, func(p repoRef) error {
+		return CheckoutRef(cfg, p.repo, p.ref)
+	}); err != nil {
+		return fmt.Errorf("checkout failed: %w", err)
+	}
+
+	fmt.Printf("\nGenerating documentation into %s (parallelism=%d)\n", cfg.OutDir, cfg.Parallelism)
+	if err := runParallel(pairs, cfg.Parallelism, func(p repoRef) error {
+		return generateDocsForRef(cfg, p.repo, p.ref)
+	}); err != nil {
+		return fmt.Errorf("generate failed: %w", err)
 	}
 
 	fmt.Printf("\nGenerating index into %s/index.html\n", cfg.OutDir)

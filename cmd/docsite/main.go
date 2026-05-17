@@ -19,6 +19,7 @@ func main() {
 	flag.StringVar(&cfg.OutDir, "out", "./docsite", "output directory for generated documentation")
 	flag.StringVar(&cfg.CacheDir, "cache", "./cache", "directory for caching cloned repos")
 	flag.StringVar(&cfg.Dock8sBin, "dock8s", "./dock8s", "path to the dock8s binary")
+	flag.IntVar(&cfg.Parallelism, "parallelism", 4, "maximum number of parallel git/doc operations")
 	flag.Parse()
 
 	if err := app.Run(cfg); err != nil {
