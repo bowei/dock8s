@@ -4,7 +4,7 @@ package main
 //
 // Generate dock8s documentation for each repo described in /repos:
 //
-//	go run cmd/docsite/main.go -repos hack/docsite/repos -out ./docsite
+//	go run cmd/docsite/main.go -out ./docsite
 
 import (
 	"flag"
@@ -15,7 +15,7 @@ import (
 
 func main() {
 	var cfg app.Config
-	flag.StringVar(&cfg.ReposDir, "repos", "hack/docsite/repos", "directory containing repo entries")
+	flag.StringVar(&cfg.ReposDir, "repos", "cmd/docsite/repos", "directory containing repo entries")
 	flag.StringVar(&cfg.OutDir, "out", "./docsite", "output directory for generated documentation")
 	flag.StringVar(&cfg.CacheDir, "cache", "./cache", "directory for caching cloned repos")
 	flag.StringVar(&cfg.Dock8sBin, "dock8s", "./dock8s", "path to the dock8s binary")
