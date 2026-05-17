@@ -56,6 +56,12 @@ refs:
   - v1.28.0
 apiDirs:
   - ... # list of api directories to generate
+# Some branches will need special handling as directories may
+# have been moved.
+apiDirsForRef:
+  - name: v1.28.0
+    dirs:
+    - ... # of api directories for a specific version.
 ```
 
 ## Pipeline
