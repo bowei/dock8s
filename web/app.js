@@ -16,6 +16,12 @@ const searchShowBeta = document.getElementById('search-show-beta');
 const helpDialogOverlay = document.getElementById('help-dialog-overlay');
 const helpDialogDialog = document.getElementById('help-dialog-dialog');
 const helpText = document.getElementById('help-text');
+const homeLink = document.getElementById('home-link');
+
+if (typeof homeURL !== 'undefined' && homeURL) {
+  homeLink.href = homeURL;
+  homeLink.style.display = 'inline-flex';
+}
 
 function makeColumn(typeName) {
   return createColumn(typeName, typeData, handleFieldClick, expandedDocStrings);

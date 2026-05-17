@@ -21,6 +21,7 @@ func main() {
 	serve := flag.Bool("serve", false, "serve API docs on localhost:8080, watching for changes (source directories are positional args)")
 	generateDir := flag.String("generate", "", "generate API docs website to this directory (source directories are positional args)")
 	sourceURLBase := flag.String("source-url-base", "", "fallback GitHub blob URL base for source links, e.g. https://github.com/org/repo/blob/main")
+	homeURL := flag.String("home-url", "", "URL for the home link shown in the top-left of the generated site (e.g. ../../ to link back to a parent index)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Generate Go API documentation.\n\n")
@@ -58,7 +59,7 @@ func main() {
 		if err != nil {
 			klog.Fatalf("Error parsing packages: %v", err)
 		}
-		if err := pkg.WriteWebsite(allTypes, *generateDir, webFS, *startType); err != nil {
+		if err := pkg.WriteWebsite(allTypes, *generateDir, webFS, *startType, *homeURL); err != nil {
 			klog.Fatalf("Error generating website: %v", err)
 		}
 		klog.Infof("Website written to %s", *generateDir)
@@ -102,7 +103,7 @@ func main() {
 
 	klog.Infof("Found %d types.", len(allTypes))
 
-	if err := pkg.GenerateDataJS(allTypes, writer, *startType); err != nil {
+	if err := pkg.GenerateDataJS(allTypes, writer, *startType, ""); err != nil {
 		klog.Fatalf("Error generating HTML: %v", err)
 	}
 }

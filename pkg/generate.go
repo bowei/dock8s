@@ -29,8 +29,10 @@ func AutoStartType(types map[string]TypeInfo) string {
 // WriteWebsite generates a complete website to destDir, copying webFS assets
 // and writing a generated data.js. webFS should be rooted at the web assets
 // directory (i.e. index.html at the root of the FS). startType specifies the
-// initial type to display; if empty, AutoStartType is used.
-func WriteWebsite(types map[string]TypeInfo, destDir string, webFS fs.FS, startType string) error {
+// initial type to display; if empty, AutoStartType is used. homeURL, if
+// non-empty, is written as the homeURL JS variable so the UI can show a home
+// link back to a parent index page.
+func WriteWebsite(types map[string]TypeInfo, destDir string, webFS fs.FS, startType, homeURL string) error {
 	if startType == "" {
 		startType = AutoStartType(types)
 	}
@@ -45,7 +47,7 @@ func WriteWebsite(types map[string]TypeInfo, destDir string, webFS fs.FS, startT
 		return fmt.Errorf("creating data.js: %w", err)
 	}
 	defer f.Close()
-	return GenerateDataJS(types, f, startType)
+	return GenerateDataJS(types, f, startType, homeURL)
 }
 
 func copyFS(destDir string, srcFS fs.FS) error {
@@ -65,8 +67,9 @@ func copyFS(destDir string, srcFS fs.FS) error {
 	})
 }
 
-// GenerateDataJS writes the self-contained HTML to `w`.
-func GenerateDataJS(types map[string]TypeInfo, w io.Writer, startType string) error {
+// GenerateDataJS writes the data.js file to `w`. homeURL, if non-empty, is
+// written as the homeURL JS variable so the UI can show a home link.
+func GenerateDataJS(types map[string]TypeInfo, w io.Writer, startType, homeURL string) error {
 	typeData, err := json.Marshal(types)
 	if err != nil {
 		return err
@@ -84,9 +87,16 @@ func GenerateDataJS(types map[string]TypeInfo, w io.Writer, startType string) er
 	if err != nil {
 		return err
 	}
-	_, err = w.Write([]byte(fmt.Sprintf("const startTypes = ['%s'];", startType)))
+	_, err = w.Write([]byte(fmt.Sprintf("const startTypes = ['%s'];\n", startType)))
 	if err != nil {
 		return err
 	}
-	return nil
+	var homeURLJS string
+	if homeURL != "" {
+		homeURLJS = fmt.Sprintf("const homeURL = '%s';", homeURL)
+	} else {
+		homeURLJS = "const homeURL = null;"
+	}
+	_, err = w.Write([]byte(homeURLJS))
+	return err
 }

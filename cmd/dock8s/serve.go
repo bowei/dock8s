@@ -80,7 +80,7 @@ func runServe(srcDirs []string, webFS fs.FS) {
 		startType := pkg.AutoStartType(types)
 
 		var jsBuf bytes.Buffer
-		if err := pkg.GenerateDataJS(types, &jsBuf, startType); err != nil {
+		if err := pkg.GenerateDataJS(types, &jsBuf, startType, ""); err != nil {
 			klog.V(2).Infof("Error generating data.js: %v", err)
 			return
 		}

@@ -72,7 +72,7 @@ func TestGenerateDataJS(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := GenerateDataJS(types, &buf, "pkg.Foo"); err != nil {
+	if err := GenerateDataJS(types, &buf, "pkg.Foo", ""); err != nil {
 		t.Fatalf("GenerateDataJS() error = %v", err)
 	}
 
@@ -83,7 +83,7 @@ func TestGenerateDataJS(t *testing.T) {
 	if !strings.Contains(out, `"pkg.Foo"`) {
 		t.Errorf("output does not contain type key 'pkg.Foo'")
 	}
-	if !strings.Contains(out, "const startTypes = ['pkg.Foo']") {
+	if !strings.Contains(out, "const startTypes = ['pkg.Foo'];\n") {
 		t.Errorf("output does not contain expected startTypes, got:\n%s", out)
 	}
 }
@@ -92,7 +92,7 @@ func TestGenerateDataJS_EmptyStartType(t *testing.T) {
 	types := map[string]TypeInfo{}
 
 	var buf bytes.Buffer
-	if err := GenerateDataJS(types, &buf, ""); err != nil {
+	if err := GenerateDataJS(types, &buf, "", ""); err != nil {
 		t.Fatalf("GenerateDataJS() error = %v", err)
 	}
 
@@ -137,7 +137,7 @@ func TestWriteWebsite(t *testing.T) {
 	}
 
 	destDir := t.TempDir()
-	if err := WriteWebsite(types, destDir, webFS, "pkg.Pod"); err != nil {
+	if err := WriteWebsite(types, destDir, webFS, "pkg.Pod", ""); err != nil {
 		t.Fatalf("WriteWebsite() error = %v", err)
 	}
 
@@ -166,7 +166,7 @@ func TestWriteWebsite_AutoStartType(t *testing.T) {
 
 	destDir := t.TempDir()
 	// Pass empty startType — should use AutoStartType.
-	if err := WriteWebsite(types, destDir, webFS, ""); err != nil {
+	if err := WriteWebsite(types, destDir, webFS, "", ""); err != nil {
 		t.Fatalf("WriteWebsite() error = %v", err)
 	}
 
@@ -191,7 +191,7 @@ func TestWriteWebsite_BadDestDir(t *testing.T) {
 	// Attempt to create a subdirectory of a file — should fail.
 	destDir := filepath.Join(f.Name(), "subdir")
 	webFS := fstest.MapFS{}
-	if err := WriteWebsite(nil, destDir, webFS, ""); err == nil {
+	if err := WriteWebsite(nil, destDir, webFS, "", ""); err == nil {
 		t.Error("WriteWebsite() expected error for bad destDir, got nil")
 	}
 }
@@ -255,27 +255,33 @@ func TestGenerateDataJS_WriteError(t *testing.T) {
 
 	// Fail immediately on first Write (the "const typeData = " header).
 	w := &failWriter{failAfter: 0}
-	if err := GenerateDataJS(types, w, ""); err == nil {
+	if err := GenerateDataJS(types, w, "", ""); err == nil {
 		t.Error("expected error when first Write fails")
 	}
 
 	// Fail after the header — on the typeData write.
 	w = &failWriter{failAfter: len("const typeData = ")}
-	if err := GenerateDataJS(types, w, ""); err == nil {
+	if err := GenerateDataJS(types, w, "", ""); err == nil {
 		t.Error("expected error when typeData Write fails")
 	}
 
 	// Fail after header + typeData JSON — on the ";\n" write.
 	typeData, _ := json.Marshal(types)
 	w = &failWriter{failAfter: len("const typeData = ") + len(typeData)}
-	if err := GenerateDataJS(types, w, ""); err == nil {
+	if err := GenerateDataJS(types, w, "", ""); err == nil {
 		t.Error("expected error when terminator Write fails")
 	}
 
 	// Fail after header + typeData + ";\n" — on the startTypes write.
 	w = &failWriter{failAfter: len("const typeData = ") + len(typeData) + len(";\n")}
-	if err := GenerateDataJS(types, w, ""); err == nil {
+	if err := GenerateDataJS(types, w, "", ""); err == nil {
 		t.Error("expected error when startTypes Write fails")
+	}
+
+	// Fail after startTypes — on the homeURL write.
+	w = &failWriter{failAfter: len("const typeData = ") + len(typeData) + len(";\n") + len("const startTypes = [''];\n")}
+	if err := GenerateDataJS(types, w, "", ""); err == nil {
+		t.Error("expected error when homeURL Write fails")
 	}
 }
 

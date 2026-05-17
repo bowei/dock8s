@@ -27,6 +27,22 @@ kbd {
   top: -1px;
 }
 
+#top-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+#home-link {
+  align-items: center;
+  color: @secondary-text;
+  text-decoration: none;
+  flex-shrink: 0;
+  &:hover { color: @text-color; }
+  svg { display: block; }
+}
+
 #repo-div {
   position: fixed;
   bottom: 1rem;
