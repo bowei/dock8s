@@ -1,4 +1,4 @@
-import { splitTypeName, formatDecorators, hashToParts } from './utils.js';
+import { splitTypeName, formatDecorators, hashToParts, extractFieldAttributes } from './utils.js';
 
 describe('splitTypeName', () => {
   it('splits a fully qualified type name', () => {
@@ -53,6 +53,52 @@ describe('formatDecorators', () => {
 
   it('formats map with complex key type', () => {
     expect(formatDecorators(['Map[ResourceName]'])).toBe('map[ResourceName]');
+  });
+});
+
+describe('extractFieldAttributes', () => {
+  it('returns empty for null', () => {
+    expect(extractFieldAttributes(null)).toEqual([]);
+  });
+
+  it('returns empty for no elements', () => {
+    expect(extractFieldAttributes({ elements: [] })).toEqual([]);
+  });
+
+  it('extracts optional', () => {
+    const doc = { elements: [{ type: 'd', content: ['+optional'] }] };
+    expect(extractFieldAttributes(doc)).toEqual(['optional']);
+  });
+
+  it('extracts required', () => {
+    const doc = { elements: [{ type: 'd', content: ['+required'] }] };
+    expect(extractFieldAttributes(doc)).toEqual(['required']);
+  });
+
+  it('handles directive with description text', () => {
+    const doc = { elements: [{ type: 'd', content: ['+optional: some note'] }] };
+    expect(extractFieldAttributes(doc)).toEqual(['optional']);
+  });
+
+  it('ignores unknown directives', () => {
+    const doc = { elements: [{ type: 'd', content: ['+unknown-directive'] }] };
+    expect(extractFieldAttributes(doc)).toEqual([]);
+  });
+
+  it('ignores non-directive elements', () => {
+    const doc = { elements: [{ type: 'p', content: ['+optional'] }] };
+    expect(extractFieldAttributes(doc)).toEqual([]);
+  });
+
+  it('extracts multiple attributes', () => {
+    const doc = {
+      elements: [
+        { type: 'd', content: ['+optional'] },
+        { type: 'p', content: ['some text'] },
+        { type: 'd', content: ['+required'] },
+      ],
+    };
+    expect(extractFieldAttributes(doc)).toEqual(['optional', 'required']);
   });
 });
 
