@@ -31,7 +31,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 10px;
 }
 
 #home-link {
@@ -442,7 +442,27 @@ li.selected .chevron::after {
   width: 360px;
   box-shadow: 0 5px 15px @dialog-shadow;
 
-  h2 { margin-top: 0; }
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    h2 { margin: 0; }
+  }
+
+  #config-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.4em;
+    cursor: pointer;
+    color: @text-color;
+    line-height: 1;
+    padding: 0 4px;
+    opacity: 0.6;
+
+    &:hover { opacity: 1; }
+  }
 }
 
 .config-row {

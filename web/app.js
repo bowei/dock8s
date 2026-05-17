@@ -18,6 +18,7 @@ const helpDialogDialog = document.getElementById('help-dialog-dialog');
 const configDialogOverlay = document.getElementById('config-dialog-overlay');
 const configDialogDialog = document.getElementById('config-dialog-dialog');
 const configBtn = document.getElementById('config-btn');
+const configCloseBtn = document.getElementById('config-close-btn');
 const helpText = document.getElementById('help-text');
 const homeLink = document.getElementById('home-link');
 
@@ -417,6 +418,10 @@ helpDialogOverlay.addEventListener('click', () => {
 
 configBtn.addEventListener('click', () => {
   showConfigDialog();
+});
+
+configCloseBtn.addEventListener('click', () => {
+  hideConfigDialog();
 });
 
 configDialogDialog.addEventListener('click', (event) => {
