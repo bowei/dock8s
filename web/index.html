@@ -39,9 +39,12 @@
   <div id="search-dialog-overlay">
     <div id="search-dialog-dialog">
       <h2>Search</h2>
-      <input type="text" id="search-dialog-input" placeholder="Filter types...">
-      <div id="search-dialog-hint">Searches root types by name. Use <kbd>f:</kbd> prefix to search fields by name (e.g. <kbd>f:spec</kbd>).</div>
-      <div id="search-dialog-options"><label><input type="checkbox" id="search-show-all">Show referenced APIs</label></div>
+      <input type="text" id="search-dialog-input" placeholder="Filter by name. Use `f:` to search fields by name">
+      <div id="search-dialog-options">
+        <label><input type="checkbox" id="search-show-alpha" checked>Show alpha APIs</label>
+        <label><input type="checkbox" id="search-show-beta" checked>Show beta APIs</label>
+        <label><input type="checkbox" id="search-show-all">Show referenced APIs</label>
+      </div>
       <div id="search-dialog-status"></div>
       <ul id="search-dialog-list"></ul>
     </div>

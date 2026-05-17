@@ -6,7 +6,7 @@ export const FIELD_SEARCH_LIMIT = 50;
 // @param {object} typeData - map of typeName -> TypeInfo
 // @param {Element} listEl - the <ul> element to populate
 // @param {boolean} [topLevelOnly=true] - when true, only show types from the source directories
-export function populateSearchDialogList(filter, typeData, listEl, topLevelOnly = true) {
+export function populateSearchDialogList(filter, typeData, listEl, topLevelOnly = true, showAlpha = true, showBeta = true) {
   listEl.innerHTML = '';
 
   const typeNames = Object.keys(typeData).filter(name => {
@@ -17,6 +17,9 @@ export function populateSearchDialogList(filter, typeData, listEl, topLevelOnly 
     if (topLevelOnly && !typeInfo.isTopLevel) {
       return false;
     }
+    const pkg = typeInfo.package || '';
+    if (!showAlpha && pkg.includes('alpha')) return false;
+    if (!showBeta && pkg.includes('beta')) return false;
     return name.toLowerCase().includes(filter.toLowerCase());
   });
 
@@ -102,7 +105,7 @@ const MAX_FIELD_SEARCH_DEPTH = 10;
 // @param {object} typeData - map of typeName -> TypeInfo
 // @param {boolean} [topLevelOnly=true] - when true, only search from types from the source directories
 // @returns {{ rootTypeName: string, path: string[] }[]}
-export function findFieldPaths(filter, typeData, topLevelOnly = true) {
+export function findFieldPaths(filter, typeData, topLevelOnly = true, showAlpha = true, showBeta = true) {
   const results = [];
   const lowerFilter = filter.toLowerCase();
 
@@ -135,6 +138,9 @@ export function findFieldPaths(filter, typeData, topLevelOnly = true) {
     const ti = typeData[rootTypeName];
     if (!ti.isRoot) continue;
     if (topLevelOnly && !ti.isTopLevel) continue;
+    const pkg = ti.package || '';
+    if (!showAlpha && pkg.includes('alpha')) continue;
+    if (!showBeta && pkg.includes('beta')) continue;
     if (results.length >= FIELD_SEARCH_LIMIT) break;
     dfs(rootTypeName, rootTypeName, [], new Set([rootTypeName]));
   }
@@ -150,14 +156,14 @@ export function findFieldPaths(filter, typeData, topLevelOnly = true) {
 // @param {object} typeData - map of typeName -> TypeInfo
 // @param {Element} listEl - the <ul> element to populate
 // @param {boolean} [topLevelOnly=true] - when true, only search from types from the source directories
-export function populateFieldSearchList(filter, typeData, listEl, topLevelOnly = true) {
+export function populateFieldSearchList(filter, typeData, listEl, topLevelOnly = true, showAlpha = true, showBeta = true) {
   listEl.innerHTML = '';
 
   if (!filter) {
     return;
   }
 
-  const matches = findFieldPaths(filter, typeData, topLevelOnly);
+  const matches = findFieldPaths(filter, typeData, topLevelOnly, showAlpha, showBeta);
 
   // Sort by field name (last path segment), then root type, then path depth,
   // then full path as final tiebreaker.

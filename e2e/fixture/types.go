@@ -1,6 +1,11 @@
 // Package v1 contains API types for the widget resource.
 package v1
 
+import (
+	"example.com/widget/v1/v1alpha1"
+	"example.com/widget/v1/v1beta1"
+)
+
 // TypeMeta describes an individual object with an API version and a kind.
 type TypeMeta struct {
 	// Kind is a string value representing the REST resource this object represents.
@@ -34,6 +39,12 @@ type Widget struct {
 
 	// Status holds the last observed state of the Widget.
 	Status WidgetStatus `json:"status,omitempty"`
+
+	// AlphaConfig holds optional experimental alpha configuration.
+	AlphaConfig *v1alpha1.AlphaWidgetSpec `json:"alphaConfig,omitempty"`
+
+	// BetaConfig holds optional beta configuration.
+	BetaConfig *v1beta1.BetaWidgetSpec `json:"betaConfig,omitempty"`
 }
 
 // WidgetList contains a list of Widget resources.

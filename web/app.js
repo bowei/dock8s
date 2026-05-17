@@ -11,6 +11,8 @@ const searchDialogInput = document.getElementById('search-dialog-input');
 const searchDialogList = document.getElementById('search-dialog-list');
 const searchDialogStatus = document.getElementById('search-dialog-status');
 const searchShowAll = document.getElementById('search-show-all');
+const searchShowAlpha = document.getElementById('search-show-alpha');
+const searchShowBeta = document.getElementById('search-show-beta');
 const helpDialogOverlay = document.getElementById('help-dialog-overlay');
 const helpDialogDialog = document.getElementById('help-dialog-dialog');
 const helpText = document.getElementById('help-text');
@@ -75,11 +77,13 @@ function updateHash() {
 function repopulateSearch() {
   const value = searchDialogInput.value;
   const topLevelOnly = !searchShowAll.checked;
+  const showAlpha = searchShowAlpha.checked;
+  const showBeta = searchShowBeta.checked;
   if (value.startsWith('f:')) {
-    const { truncated } = populateFieldSearchList(value.slice(2).trim(), typeData, searchDialogList, topLevelOnly);
+    const { truncated } = populateFieldSearchList(value.slice(2).trim(), typeData, searchDialogList, topLevelOnly, showAlpha, showBeta);
     searchDialogStatus.textContent = truncated ? `Showing top ${FIELD_SEARCH_LIMIT} results — refine your search` : '';
   } else {
-    populateSearchDialogList(value, typeData, searchDialogList, topLevelOnly);
+    populateSearchDialogList(value, typeData, searchDialogList, topLevelOnly, showAlpha, showBeta);
     searchDialogStatus.textContent = '';
   }
 }
@@ -335,6 +339,8 @@ mainContainer.addEventListener('click', (event) => {
 
 searchDialogInput.addEventListener('input', repopulateSearch);
 searchShowAll.addEventListener('change', repopulateSearch);
+searchShowAlpha.addEventListener('change', repopulateSearch);
+searchShowBeta.addEventListener('change', repopulateSearch);
 
 searchDialogInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {

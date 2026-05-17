@@ -9,6 +9,8 @@ const typeData = {
   'example.io/v1.Node': { typeName: 'Node', package: 'example.io/v1', isRoot: true, isTopLevel: true },
   'example.io/v1.Namespace': { typeName: 'Namespace', package: 'example.io/v1', isRoot: true, isTopLevel: true },
   'other.io/v1.Pod': { typeName: 'Pod', package: 'other.io/v1', isRoot: true, isTopLevel: false },
+  'example.io/v1alpha1.AlphaThing': { typeName: 'AlphaThing', package: 'example.io/v1alpha1', isRoot: true, isTopLevel: true },
+  'example.io/v1beta1.BetaThing': { typeName: 'BetaThing', package: 'example.io/v1beta1', isRoot: true, isTopLevel: true },
 };
 
 // typeData for field search tests: a graph with one reachable branch and one orphan.
@@ -58,8 +60,8 @@ describe('populateSearchDialogList', () => {
     const list = makeList();
     populateSearchDialogList('', typeData, list, false);
     const items = list.querySelectorAll('li');
-    // PodSpec is not root, so 4 items
-    expect(items.length).toBe(4);
+    // PodSpec is not root; AlphaThing and BetaThing are root, so 6 items
+    expect(items.length).toBe(6);
     const typeNames = Array.from(items).map(li => li.dataset.typeName);
     expect(typeNames).not.toContain('example.io/v1.PodSpec');
   });
@@ -68,8 +70,8 @@ describe('populateSearchDialogList', () => {
     const list = makeList();
     populateSearchDialogList('', typeData, list);
     const items = list.querySelectorAll('li');
-    // other.io/v1.Pod is root but not top-level, so 3 items
-    expect(items.length).toBe(3);
+    // other.io/v1.Pod is root but not top-level; AlphaThing and BetaThing are top-level, so 5 items
+    expect(items.length).toBe(5);
     const typeNames = Array.from(items).map(li => li.dataset.typeName);
     expect(typeNames).not.toContain('other.io/v1.Pod');
     expect(typeNames).not.toContain('example.io/v1.PodSpec');
@@ -110,12 +112,14 @@ describe('populateSearchDialogList', () => {
     const list = makeList();
     populateSearchDialogList('', typeData, list, false);
     const typeNames = Array.from(list.querySelectorAll('li')).map(li => li.dataset.typeName);
-    // Short names: Namespace, Node, Pod, Pod — sorted alphabetically by short name
-    expect(typeNames[0]).toBe('example.io/v1.Namespace');
-    expect(typeNames[1]).toBe('example.io/v1.Node');
+    // Short names: AlphaThing, BetaThing, Namespace, Node, Pod, Pod — sorted alphabetically by short name
+    expect(typeNames[0]).toBe('example.io/v1alpha1.AlphaThing');
+    expect(typeNames[1]).toBe('example.io/v1beta1.BetaThing');
+    expect(typeNames[2]).toBe('example.io/v1.Namespace');
+    expect(typeNames[3]).toBe('example.io/v1.Node');
     // Both Pods have same short name; sorted by full name
-    expect(typeNames[2]).toBe('example.io/v1.Pod');
-    expect(typeNames[3]).toBe('other.io/v1.Pod');
+    expect(typeNames[4]).toBe('example.io/v1.Pod');
+    expect(typeNames[5]).toBe('other.io/v1.Pod');
   });
 
   it('marks the first item as selected', () => {
@@ -140,6 +144,30 @@ describe('populateSearchDialogList', () => {
     expect(list.querySelectorAll('li').length).toBe(2);
     populateSearchDialogList('node', typeData, list, false);
     expect(list.querySelectorAll('li').length).toBe(1);
+  });
+
+  it('hides alpha types when showAlpha=false', () => {
+    const list = makeList();
+    populateSearchDialogList('', typeData, list, false, false, true);
+    const typeNames = Array.from(list.querySelectorAll('li')).map(li => li.dataset.typeName);
+    expect(typeNames).not.toContain('example.io/v1alpha1.AlphaThing');
+    expect(typeNames).toContain('example.io/v1beta1.BetaThing');
+  });
+
+  it('hides beta types when showBeta=false', () => {
+    const list = makeList();
+    populateSearchDialogList('', typeData, list, false, true, false);
+    const typeNames = Array.from(list.querySelectorAll('li')).map(li => li.dataset.typeName);
+    expect(typeNames).toContain('example.io/v1alpha1.AlphaThing');
+    expect(typeNames).not.toContain('example.io/v1beta1.BetaThing');
+  });
+
+  it('shows alpha and beta types by default', () => {
+    const list = makeList();
+    populateSearchDialogList('', typeData, list, false);
+    const typeNames = Array.from(list.querySelectorAll('li')).map(li => li.dataset.typeName);
+    expect(typeNames).toContain('example.io/v1alpha1.AlphaThing');
+    expect(typeNames).toContain('example.io/v1beta1.BetaThing');
   });
 });
 
@@ -275,6 +303,40 @@ describe('findFieldPaths', () => {
     const roots = results.map(r => r.rootTypeName);
     expect(roots).toContain('example.io/v1.Pod');
     expect(roots).toContain('dep.io/v1.DepType');
+  });
+
+  it('excludes alpha root types when showAlpha=false', () => {
+    const data = {
+      'example.io/v1.Pod': {
+        typeName: 'Pod', package: 'example.io/v1', isRoot: true, isTopLevel: true,
+        fields: [{ fieldName: 'spec', typeName: 'string' }],
+      },
+      'example.io/v1alpha1.AlphaThing': {
+        typeName: 'AlphaThing', package: 'example.io/v1alpha1', isRoot: true, isTopLevel: true,
+        fields: [{ fieldName: 'spec', typeName: 'string' }],
+      },
+    };
+    const results = findFieldPaths('spec', data, true, false, true);
+    const roots = results.map(r => r.rootTypeName);
+    expect(roots).toContain('example.io/v1.Pod');
+    expect(roots).not.toContain('example.io/v1alpha1.AlphaThing');
+  });
+
+  it('excludes beta root types when showBeta=false', () => {
+    const data = {
+      'example.io/v1.Pod': {
+        typeName: 'Pod', package: 'example.io/v1', isRoot: true, isTopLevel: true,
+        fields: [{ fieldName: 'spec', typeName: 'string' }],
+      },
+      'example.io/v1beta1.BetaThing': {
+        typeName: 'BetaThing', package: 'example.io/v1beta1', isRoot: true, isTopLevel: true,
+        fields: [{ fieldName: 'spec', typeName: 'string' }],
+      },
+    };
+    const results = findFieldPaths('spec', data, true, true, false);
+    const roots = results.map(r => r.rootTypeName);
+    expect(roots).toContain('example.io/v1.Pod');
+    expect(roots).not.toContain('example.io/v1beta1.BetaThing');
   });
 
   it('same root appears multiple times for different paths to matching field', () => {
