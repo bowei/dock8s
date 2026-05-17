@@ -20,7 +20,7 @@ export function populateSearchDialogList(filter, typeData, listEl, topLevelOnly 
     const pkg = typeInfo.package || '';
     if (!showAlpha && pkg.includes('alpha')) return false;
     if (!showBeta && pkg.includes('beta')) return false;
-    return name.toLowerCase().includes(filter.toLowerCase());
+    return (typeInfo.typeName || '').toLowerCase().includes(filter.toLowerCase());
   });
 
   // Sort on the short name.

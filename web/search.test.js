@@ -169,6 +169,48 @@ describe('populateSearchDialogList', () => {
     expect(typeNames).toContain('example.io/v1alpha1.AlphaThing');
     expect(typeNames).toContain('example.io/v1beta1.BetaThing');
   });
+
+  it('does not match package path — only the short type name', () => {
+    // 'gateway' appears in the package path of HTTPRoute but not its type name.
+    // It does appear in the type name of Gateway.
+    const gatewayData = {
+      'sig.k8s.io/gateway-api/apis/v1.HTTPRoute': {
+        typeName: 'HTTPRoute', package: 'sig.k8s.io/gateway-api/apis/v1', isRoot: true, isTopLevel: true,
+      },
+      'sig.k8s.io/gateway-api/apis/v1.Gateway': {
+        typeName: 'Gateway', package: 'sig.k8s.io/gateway-api/apis/v1', isRoot: true, isTopLevel: true,
+      },
+    };
+    const list = makeList();
+    populateSearchDialogList('gateway', gatewayData, list);
+    const typeNames = Array.from(list.querySelectorAll('li')).map(li => li.dataset.typeName);
+    expect(typeNames).toContain('sig.k8s.io/gateway-api/apis/v1.Gateway');
+    expect(typeNames).not.toContain('sig.k8s.io/gateway-api/apis/v1.HTTPRoute');
+  });
+
+  it('matches type name that shares a substring with the package path', () => {
+    // Both Gateway and GatewayClass have "gateway" in their type name and package path.
+    // Searching "gateway" should match both type names, not accidentally exclude or
+    // double-count due to package path matching.
+    const gatewayData = {
+      'sig.k8s.io/gateway-api/apis/v1.Gateway': {
+        typeName: 'Gateway', package: 'sig.k8s.io/gateway-api/apis/v1', isRoot: true, isTopLevel: true,
+      },
+      'sig.k8s.io/gateway-api/apis/v1.GatewayClass': {
+        typeName: 'GatewayClass', package: 'sig.k8s.io/gateway-api/apis/v1', isRoot: true, isTopLevel: true,
+      },
+      'sig.k8s.io/gateway-api/apis/v1.HTTPRoute': {
+        typeName: 'HTTPRoute', package: 'sig.k8s.io/gateway-api/apis/v1', isRoot: true, isTopLevel: true,
+      },
+    };
+    const list = makeList();
+    populateSearchDialogList('gateway', gatewayData, list);
+    const typeNames = Array.from(list.querySelectorAll('li')).map(li => li.dataset.typeName);
+    expect(typeNames).toHaveLength(2);
+    expect(typeNames).toContain('sig.k8s.io/gateway-api/apis/v1.Gateway');
+    expect(typeNames).toContain('sig.k8s.io/gateway-api/apis/v1.GatewayClass');
+    expect(typeNames).not.toContain('sig.k8s.io/gateway-api/apis/v1.HTTPRoute');
+  });
 });
 
 describe('buildReachableTypes', () => {
