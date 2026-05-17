@@ -1,6 +1,6 @@
 refs:
 - master
-dirs:
+apiDirs:
 - admission
 - admissionregistration
 - apidiscovery

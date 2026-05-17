@@ -34,8 +34,17 @@ type RepoEntry struct {
 type RepoMeta struct {
 	// Refs are the branches and tags to generate documentation for.
 	Refs []string
-	// Dirs are the relative paths within the repo to pass to dock8s.
+	// ApiDirs are the default relative paths within the repo to pass to dock8s.
 	// When empty, the repo root is used.
+	ApiDirs []string
+	// ApiDirsForRef are per-ref overrides. When a ref matches an entry here,
+	// that entry's Dirs take precedence over ApiDirs.
+	ApiDirsForRef []RefDirs
+}
+
+// RefDirs holds per-ref directory overrides for a single ref.
+type RefDirs struct {
+	Name string
 	Dirs []string
 }
 
@@ -51,10 +60,12 @@ func (r RepoEntry) CachePathForRef(cacheDir, ref string) string {
 //
 //	refs:
 //	  - branch-or-tag
-//	  - another-ref
-//	dirs:
+//	apiDirs:
 //	  - relative/path
-//	  - another/path
+//	apiDirsForRef:
+//	  - name: branch-or-tag
+//	    dirs:
+//	    - relative/path
 func LoadMeta(path string) (RepoMeta, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -62,30 +73,76 @@ func LoadMeta(path string) (RepoMeta, error) {
 	}
 
 	var meta RepoMeta
+	// section tracks the current top-level key.
+	// subSection tracks nested state inside apiDirsForRef items.
 	section := ""
+	subSection := ""
+	// currentRefDirs accumulates the in-progress apiDirsForRef entry.
+	var currentRefDirs *RefDirs
+
+	flushRefDirs := func() {
+		if currentRefDirs != nil {
+			meta.ApiDirsForRef = append(meta.ApiDirsForRef, *currentRefDirs)
+			currentRefDirs = nil
+		}
+	}
+
 	for _, line := range strings.Split(string(data), "\n") {
 		stripped := strings.TrimSpace(line)
-		if stripped == "refs:" {
-			section = "refs"
-			continue
-		}
-		if stripped == "dirs:" {
-			section = "dirs"
-			continue
-		}
-		if strings.HasPrefix(stripped, "- ") {
-			val := strings.TrimSpace(strings.TrimPrefix(stripped, "- "))
+
+		switch {
+		case stripped == "refs:":
+			flushRefDirs()
+			section, subSection = "refs", ""
+		case stripped == "apiDirs:":
+			flushRefDirs()
+			section, subSection = "apiDirs", ""
+		case stripped == "apiDirsForRef:":
+			flushRefDirs()
+			section, subSection = "apiDirsForRef", ""
+		case stripped == "":
+			// blank lines are ignored
+		case stripped == "dirs:" && section == "apiDirsForRef":
+			subSection = "dirs"
+		case strings.HasPrefix(stripped, "- name: ") && section == "apiDirsForRef":
+			flushRefDirs()
+			currentRefDirs = &RefDirs{Name: strings.TrimPrefix(stripped, "- name: ")}
+			subSection = ""
+		case strings.HasPrefix(stripped, "- ") && section == "apiDirsForRef" && subSection == "dirs":
+			if currentRefDirs != nil {
+				currentRefDirs.Dirs = append(currentRefDirs.Dirs, strings.TrimPrefix(stripped, "- "))
+			}
+		case strings.HasPrefix(stripped, "- "):
+			val := strings.TrimPrefix(stripped, "- ")
 			switch section {
 			case "refs":
 				meta.Refs = append(meta.Refs, val)
-			case "dirs":
-				meta.Dirs = append(meta.Dirs, val)
+			case "apiDirs":
+				meta.ApiDirs = append(meta.ApiDirs, val)
 			}
-		} else if stripped != "" {
-			section = ""
+		default:
+			// Unknown top-level key (no leading whitespace, ends with ":"): reset section.
+			if strings.HasSuffix(stripped, ":") && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+				flushRefDirs()
+				section, subSection = "", ""
+			}
 		}
 	}
+	flushRefDirs()
 	return meta, nil
+}
+
+// DirsForRef returns the source directories to use for the given ref.
+// It checks ApiDirsForRef for a matching entry first, then falls back to
+// ApiDirs. Returns nil when no dirs are configured (caller should use the
+// repo root).
+func DirsForRef(meta RepoMeta, ref string) []string {
+	for _, rd := range meta.ApiDirsForRef {
+		if rd.Name == ref {
+			return rd.Dirs
+		}
+	}
+	return meta.ApiDirs
 }
 
 // LoadRepos walks cfg.ReposDir and builds the list of repos.
@@ -213,8 +270,8 @@ func GenerateDocsForRepo(cfg Config, r RepoEntry) error {
 
 		// Determine the source directories.
 		var srcDirs []string
-		if len(r.Meta.Dirs) > 0 {
-			for _, d := range r.Meta.Dirs {
+		if dirs := DirsForRef(r.Meta, ref); len(dirs) > 0 {
+			for _, d := range dirs {
 				srcDirs = append(srcDirs, filepath.Join(dest, d))
 			}
 		} else {

@@ -1,5 +1,5 @@
 refs:
 - main
-dirs:
+apiDirs:
 - api
 - extensions/api

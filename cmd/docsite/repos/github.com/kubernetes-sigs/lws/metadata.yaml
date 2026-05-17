@@ -1,5 +1,5 @@
 refs:
 - main
 - release-0.8
-dirs:
+apiDirs:
 - api

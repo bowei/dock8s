@@ -88,32 +88,89 @@ other:
 			want: RepoMeta{},
 		},
 		{
-			name: "dirs only",
-			content: `dirs:
+			name: "apiDirs only",
+			content: `apiDirs:
   - api
   - pkg/k8s
 `,
-			want: RepoMeta{Dirs: []string{"api", "pkg/k8s"}},
+			want: RepoMeta{ApiDirs: []string{"api", "pkg/k8s"}},
 		},
 		{
-			name: "refs and dirs",
+			name: "refs and apiDirs",
 			content: `refs:
   - main
   - v1.0.0
-dirs:
+apiDirs:
   - apis
   - extensions/api
 `,
-			want: RepoMeta{Refs: []string{"main", "v1.0.0"}, Dirs: []string{"apis", "extensions/api"}},
+			want: RepoMeta{Refs: []string{"main", "v1.0.0"}, ApiDirs: []string{"apis", "extensions/api"}},
 		},
 		{
-			name: "dirs before refs",
-			content: `dirs:
+			name: "apiDirs before refs",
+			content: `apiDirs:
   - api
 refs:
   - main
 `,
-			want: RepoMeta{Refs: []string{"main"}, Dirs: []string{"api"}},
+			want: RepoMeta{Refs: []string{"main"}, ApiDirs: []string{"api"}},
+		},
+		{
+			name: "apiDirsForRef single entry",
+			content: `refs:
+  - main
+  - v1.0.0
+apiDirs:
+  - apis
+apiDirsForRef:
+  - name: v1.0.0
+    dirs:
+    - old/apis
+`,
+			want: RepoMeta{
+				Refs:    []string{"main", "v1.0.0"},
+				ApiDirs: []string{"apis"},
+				ApiDirsForRef: []RefDirs{
+					{Name: "v1.0.0", Dirs: []string{"old/apis"}},
+				},
+			},
+		},
+		{
+			name: "apiDirsForRef multiple entries",
+			content: `apiDirs:
+  - apis
+apiDirsForRef:
+  - name: v1.0.0
+    dirs:
+    - old/apis
+    - extra
+  - name: release-1.4
+    dirs:
+    - legacy
+`,
+			want: RepoMeta{
+				ApiDirs: []string{"apis"},
+				ApiDirsForRef: []RefDirs{
+					{Name: "v1.0.0", Dirs: []string{"old/apis", "extra"}},
+					{Name: "release-1.4", Dirs: []string{"legacy"}},
+				},
+			},
+		},
+		{
+			name: "apiDirsForRef no apiDirs fallback",
+			content: `refs:
+  - main
+apiDirsForRef:
+  - name: main
+    dirs:
+    - src/api
+`,
+			want: RepoMeta{
+				Refs: []string{"main"},
+				ApiDirsForRef: []RefDirs{
+					{Name: "main", Dirs: []string{"src/api"}},
+				},
+			},
 		},
 		{
 			name:    "file not found",
@@ -154,15 +211,70 @@ refs:
 					t.Errorf("LoadMeta() refs[%d] = %q, want %q", i, ref, tt.want.Refs[i])
 				}
 			}
-			if len(got.Dirs) != len(tt.want.Dirs) {
-				t.Fatalf("LoadMeta() dirs = %v, want %v", got.Dirs, tt.want.Dirs)
+			if len(got.ApiDirs) != len(tt.want.ApiDirs) {
+				t.Fatalf("LoadMeta() apiDirs = %v, want %v", got.ApiDirs, tt.want.ApiDirs)
 			}
-			for i, d := range got.Dirs {
-				if d != tt.want.Dirs[i] {
-					t.Errorf("LoadMeta() dirs[%d] = %q, want %q", i, d, tt.want.Dirs[i])
+			for i, d := range got.ApiDirs {
+				if d != tt.want.ApiDirs[i] {
+					t.Errorf("LoadMeta() apiDirs[%d] = %q, want %q", i, d, tt.want.ApiDirs[i])
+				}
+			}
+			if len(got.ApiDirsForRef) != len(tt.want.ApiDirsForRef) {
+				t.Fatalf("LoadMeta() apiDirsForRef = %v, want %v", got.ApiDirsForRef, tt.want.ApiDirsForRef)
+			}
+			for i, rd := range got.ApiDirsForRef {
+				wrd := tt.want.ApiDirsForRef[i]
+				if rd.Name != wrd.Name {
+					t.Errorf("LoadMeta() apiDirsForRef[%d].Name = %q, want %q", i, rd.Name, wrd.Name)
+				}
+				if len(rd.Dirs) != len(wrd.Dirs) {
+					t.Fatalf("LoadMeta() apiDirsForRef[%d].Dirs = %v, want %v", i, rd.Dirs, wrd.Dirs)
+				}
+				for j, d := range rd.Dirs {
+					if d != wrd.Dirs[j] {
+						t.Errorf("LoadMeta() apiDirsForRef[%d].Dirs[%d] = %q, want %q", i, j, d, wrd.Dirs[j])
+					}
 				}
 			}
 		})
+	}
+}
+
+func TestDirsForRef(t *testing.T) {
+	meta := RepoMeta{
+		ApiDirs: []string{"apis"},
+		ApiDirsForRef: []RefDirs{
+			{Name: "v1.0.0", Dirs: []string{"old/apis", "extra"}},
+			{Name: "release-1.4", Dirs: []string{"legacy"}},
+		},
+	}
+
+	tests := []struct {
+		ref  string
+		want []string
+	}{
+		{"v1.0.0", []string{"old/apis", "extra"}},
+		{"release-1.4", []string{"legacy"}},
+		{"main", []string{"apis"}},
+		{"unknown", []string{"apis"}},
+	}
+	for _, tt := range tests {
+		got := DirsForRef(meta, tt.ref)
+		if len(got) != len(tt.want) {
+			t.Errorf("DirsForRef(%q) = %v, want %v", tt.ref, got, tt.want)
+			continue
+		}
+		for i, d := range got {
+			if d != tt.want[i] {
+				t.Errorf("DirsForRef(%q)[%d] = %q, want %q", tt.ref, i, d, tt.want[i])
+			}
+		}
+	}
+
+	// No apiDirs configured: returns nil.
+	metaEmpty := RepoMeta{}
+	if got := DirsForRef(metaEmpty, "main"); got != nil {
+		t.Errorf("DirsForRef on empty meta = %v, want nil", got)
 	}
 }
 
