@@ -1,3 +1,20 @@
+// FIELD_ATTRIBUTE_CONFIG maps directive names to display config.
+// Add a new entry here to support additional field attributes.
+export const FIELD_ATTRIBUTE_CONFIG = {
+  optional: { label: 'optional', cssClass: 'attr-optional' },
+  required: { label: 'required', cssClass: 'attr-required' },
+};
+
+// extractFieldAttributes returns the list of known attribute names found in
+// the directives of a parsed docstring.
+export function extractFieldAttributes(parsedDocString) {
+  if (!parsedDocString || !parsedDocString.elements) return [];
+  return parsedDocString.elements
+    .filter(e => e.type === 'd')
+    .map(e => e.content[0].replace(/^\+/, '').split(':')[0].trim())
+    .filter(name => name in FIELD_ATTRIBUTE_CONFIG);
+}
+
 export function splitTypeName(fullTypeName) {
   const lastDot = fullTypeName.lastIndexOf('.');
   if (lastDot === -1) {

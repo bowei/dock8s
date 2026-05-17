@@ -11,9 +11,21 @@ const searchDialogInput = document.getElementById('search-dialog-input');
 const searchDialogList = document.getElementById('search-dialog-list');
 const searchDialogStatus = document.getElementById('search-dialog-status');
 const searchShowAll = document.getElementById('search-show-all');
+const searchShowAlpha = document.getElementById('search-show-alpha');
+const searchShowBeta = document.getElementById('search-show-beta');
 const helpDialogOverlay = document.getElementById('help-dialog-overlay');
 const helpDialogDialog = document.getElementById('help-dialog-dialog');
+const configDialogOverlay = document.getElementById('config-dialog-overlay');
+const configDialogDialog = document.getElementById('config-dialog-dialog');
+const configBtn = document.getElementById('config-btn');
+const configCloseBtn = document.getElementById('config-close-btn');
 const helpText = document.getElementById('help-text');
+const homeLink = document.getElementById('home-link');
+
+if (typeof homeURL !== 'undefined' && homeURL) {
+  homeLink.href = homeURL;
+  homeLink.style.display = 'inline-flex';
+}
 
 function makeColumn(typeName) {
   return createColumn(typeName, typeData, handleFieldClick, expandedDocStrings);
@@ -75,11 +87,13 @@ function updateHash() {
 function repopulateSearch() {
   const value = searchDialogInput.value;
   const topLevelOnly = !searchShowAll.checked;
+  const showAlpha = searchShowAlpha.checked;
+  const showBeta = searchShowBeta.checked;
   if (value.startsWith('f:')) {
-    const { truncated } = populateFieldSearchList(value.slice(2).trim(), typeData, searchDialogList, topLevelOnly);
+    const { truncated } = populateFieldSearchList(value.slice(2).trim(), typeData, searchDialogList, topLevelOnly, showAlpha, showBeta);
     searchDialogStatus.textContent = truncated ? `Showing top ${FIELD_SEARCH_LIMIT} results — refine your search` : '';
   } else {
-    populateSearchDialogList(value, typeData, searchDialogList, topLevelOnly);
+    populateSearchDialogList(value, typeData, searchDialogList, topLevelOnly, showAlpha, showBeta);
     searchDialogStatus.textContent = '';
   }
 }
@@ -106,6 +120,14 @@ function showHelpDialog() {
 function hideHelpDialog() {
   console.log('Hiding help dialog');
   helpDialogOverlay.style.display = 'none';
+}
+
+function showConfigDialog() {
+  configDialogOverlay.style.display = 'flex';
+}
+
+function hideConfigDialog() {
+  configDialogOverlay.style.display = 'none';
 }
 
 function selectItem(li) {
@@ -227,10 +249,13 @@ function handleKeyDown(event) {
       console.log("'esc' key pressed");
       hideHelpDialog();
     }
+    if (configDialogOverlay.style.display === 'flex') {
+      hideConfigDialog();
+    }
     return;
   }
 
-  if (searchDialogOverlay.style.display === 'flex' || helpDialogOverlay.style.display === 'flex') {
+  if (searchDialogOverlay.style.display === 'flex' || helpDialogOverlay.style.display === 'flex' || configDialogOverlay.style.display === 'flex') {
     return;
   }
 
@@ -335,6 +360,8 @@ mainContainer.addEventListener('click', (event) => {
 
 searchDialogInput.addEventListener('input', repopulateSearch);
 searchShowAll.addEventListener('change', repopulateSearch);
+searchShowAlpha.addEventListener('change', repopulateSearch);
+searchShowBeta.addEventListener('change', repopulateSearch);
 
 searchDialogInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
@@ -387,4 +414,20 @@ helpDialogDialog.addEventListener('click', (event) => {
 
 helpDialogOverlay.addEventListener('click', () => {
   hideHelpDialog();
+});
+
+configBtn.addEventListener('click', () => {
+  showConfigDialog();
+});
+
+configCloseBtn.addEventListener('click', () => {
+  hideConfigDialog();
+});
+
+configDialogDialog.addEventListener('click', (event) => {
+  event.stopPropagation();
+});
+
+configDialogOverlay.addEventListener('click', () => {
+  hideConfigDialog();
 });

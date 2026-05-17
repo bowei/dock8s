@@ -1,7 +1,7 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
-  padding: 20px;
+  padding: 10px;
   background-color: #FFFFFF;
   color: #24292E;
   scrollbar-color: #D1D5DA #F6F8FA;
@@ -23,6 +23,32 @@ kbd {
   margin: 0 0.2em;
   position: relative;
   top: -1px;
+}
+#top-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+#home-link {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: #586069;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+#home-link:hover {
+  color: #24292E;
+}
+#home-link svg {
+  display: block;
+}
+#help-text {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  margin: 0;
 }
 #repo-div {
   position: fixed;
@@ -107,6 +133,27 @@ li.selected {
 .field-type {
   font-size: 10pt;
   margin-left: 6pt;
+  color: #586069;
+}
+.field-attrs {
+  margin-top: 6px;
+  display: flex;
+  gap: 4px;
+}
+.field-attr {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.65em;
+  font-weight: 600;
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0.02em;
+}
+.attr-optional,
+.attr-required {
+  background: rgba(120, 120, 120, 0.12);
+  border: 1px solid rgba(120, 120, 120, 0.25);
   color: #586069;
 }
 .enum-value {
@@ -212,6 +259,24 @@ li.selected .chevron::after {
   color: #24292E;
   border-radius: 4px;
 }
+#search-dialog-options {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+  font-size: 0.85em;
+  color: #586069;
+}
+#search-dialog-options label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+#search-dialog-options label input[type="checkbox"] {
+  accent-color: #24292E;
+  cursor: pointer;
+}
 #search-dialog-list {
   list-style-type: none;
   padding: 0;
@@ -292,14 +357,79 @@ li.selected .chevron::after {
   margin-bottom: 6px;
   text-align: right;
 }
-/* theme picker */
-#theme-picker {
+/* config button */
+#config-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #586069;
+  flex-shrink: 0;
+}
+#config-btn:hover {
+  color: #24292E;
+}
+#config-btn svg {
+  display: block;
+}
+/* config dialog */
+#config-dialog-overlay {
   position: fixed;
-  top: 12px;
-  right: 20px;
-  z-index: 10;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+#config-dialog-dialog {
+  background-color: #FFFFFF;
+  padding: 20px;
+  border-radius: 8px;
+  width: 360px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+#config-dialog-dialog .dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+#config-dialog-dialog .dialog-header h2 {
+  margin: 0;
+}
+#config-dialog-dialog #config-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.4em;
+  cursor: pointer;
+  color: #24292E;
+  line-height: 1;
+  padding: 0 4px;
+  opacity: 0.6;
+}
+#config-dialog-dialog #config-close-btn:hover {
+  opacity: 1;
+}
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.config-row label {
+  flex: 0 0 auto;
+  font-size: 0.9em;
+  color: #24292E;
 }
 #theme-select {
+  flex: 1;
   padding: 6px 10px;
   border-radius: 4px;
   border: 1px solid #E1E4E8;

@@ -1,5 +1,5 @@
 import { createDocString } from './godoc.js';
-import { splitTypeName, formatDecorators } from './utils.js';
+import { splitTypeName, formatDecorators, extractFieldAttributes, FIELD_ATTRIBUTE_CONFIG } from './utils.js';
 
 // createColumn builds a column DOM element for the given type.
 //
@@ -73,6 +73,20 @@ export function createColumn(typeName, typeData, onFieldClick, expandedDocString
       const contentWrapper = document.createElement('div');
       contentWrapper.appendChild(line1);
       contentWrapper.appendChild(line2);
+
+      const attrs = extractFieldAttributes(field.parsedDocString);
+      if (attrs.length > 0) {
+        const attrLine = document.createElement('div');
+        attrLine.className = 'field-attrs';
+        attrs.forEach(attr => {
+          const cfg = FIELD_ATTRIBUTE_CONFIG[attr];
+          const lozenge = document.createElement('span');
+          lozenge.className = `field-attr ${cfg.cssClass}`;
+          lozenge.textContent = cfg.label;
+          attrLine.appendChild(lozenge);
+        });
+        contentWrapper.appendChild(attrLine);
+      }
       if (field.docString) {
         const expandKey = typeName + '.' + field.fieldName;
         const docStringEl = createDocString(field.parsedDocString);
