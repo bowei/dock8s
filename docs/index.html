@@ -18,43 +18,59 @@
     margin-bottom: 1.5rem;
     color: #1f2328;
   }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1rem;
-    max-width: 1200px;
-  }
-  .card {
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 1100px;
     background: #fff;
     border: 1px solid #d0d7de;
     border-radius: 6px;
-    padding: 1rem 1.25rem;
+    overflow: hidden;
   }
-  .card-repo {
-    font-size: 0.8rem;
-    color: #57606a;
-    margin-bottom: 0.4rem;
-    word-break: break-all;
-  }
-  .card-name {
-    font-size: 1rem;
+  thead th {
+    text-align: left;
+    font-size: 0.78rem;
     font-weight: 600;
-    margin-bottom: 0.6rem;
-    word-break: break-all;
+    color: #57606a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.6rem 0.75rem;
+    background: #f6f8fa;
+    border-bottom: 1px solid #d0d7de;
   }
-  .refs { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  thead th:first-child { width: 2rem; padding-right: 0; }
+  tbody tr { border-bottom: 1px solid #eaeef2; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f6f8fa; }
+  tbody td { padding: 0.55rem 0.75rem; vertical-align: middle; }
+  tbody td:first-child { padding-right: 0; width: 2rem; }
+  .col-org { width: 14rem; color: #57606a; font-size: 0.88rem; white-space: nowrap; }
+  .col-repo { font-weight: 600; font-size: 0.95rem; }
+  .col-refs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
   .ref-link {
     display: inline-block;
-    padding: 0.2rem 0.6rem;
+    padding: 0.15rem 0.55rem;
     background: #ddf4ff;
     color: #0550ae;
     border: 1px solid #54aeff66;
     border-radius: 2rem;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     text-decoration: none;
     font-weight: 500;
   }
   .ref-link:hover { background: #54aeff33; }
+  .star-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #d0d7de;
+    padding: 0 0.25rem;
+    line-height: 1;
+    transition: color 0.1s;
+  }
+  .star-btn:hover { color: #d4a017; }
+  .star-btn.starred { color: #d4a017; }
   .gh-link {
     position: fixed;
     bottom: 1rem;
@@ -72,546 +88,518 @@
 </head>
 <body>
 <h1>API Reference</h1>
-<div class="grid">
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">GoogleCloudPlatform/gke-networking-api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/GoogleCloudPlatform/gke-networking-api@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">cilium/cilium</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/cilium/cilium@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes/api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes/api@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/about-api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/about-api@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/agent-sandbox</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/agent-sandbox@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/apiserver-builder-alpha</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/apiserver-builder-alpha@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/apiserver-runtime</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/apiserver-runtime@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/application</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/application@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/aws-iam-authenticator</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/aws-iam-authenticator@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/aws-load-balancer-controller</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/aws-load-balancer-controller@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/boskos</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/boskos@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-addons</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-addons@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-addon-provider-helm</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-addon-provider-helm@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-ipam-provider-in-cluster</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-operator</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-operator@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-aws</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-aws@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-azure</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-azure@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-cloudstack</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-cloudstack@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-digitalocean</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-digitalocean@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-gcp</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-gcp@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-ibmcloud</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-ibmcloud@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-kubemark</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-kubemark@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-kubevirt</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-kubevirt@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-openstack</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-openstack@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-api-provider-vsphere</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-vsphere@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/cluster-inventory-api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/cluster-inventory-api@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/container-object-storage-interface</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/container-object-storage-interface@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/controller-runtime</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/controller-runtime@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/controller-tools</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/controller-tools@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/descheduler</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/descheduler@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/dra-driver-nvidia-gpu</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/dra-driver-nvidia-gpu@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/dra-example-driver</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/dra-example-driver@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/external-dns</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/external-dns@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/gateway-api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/gateway-api@main/">main</a>
-      <a class="ref-link" href="github.com/kubernetes-sigs/gateway-api@release-1.4/">release-1.4</a>
-      <a class="ref-link" href="github.com/kubernetes-sigs/gateway-api@release-1.5/">release-1.5</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/gateway-api-inference-extension</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/gateway-api-inference-extension@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/gcp-filestore-csi-driver</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/gcp-filestore-csi-driver@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/jobset</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/jobset@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/karpenter</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/karpenter@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/karpenter-provider-cluster-api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/karpenter-provider-cluster-api@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/karpenter-provider-ibm-cloud</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/karpenter-provider-ibm-cloud@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kernel-module-management</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kernel-module-management@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kjob</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kjob@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kro</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kro@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kube-agentic-networking</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kube-agentic-networking@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kube-api-linter</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kube-api-linter@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kube-scheduler-simulator</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kube-scheduler-simulator@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kube-scheduler-wasm-extension</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kube-scheduler-wasm-extension@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kube-storage-version-migrator</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kube-storage-version-migrator@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kubebuilder</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kubebuilder@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kubebuilder-declarative-pattern</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kubebuilder-declarative-pattern@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kueue</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kueue@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/kwok</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/kwok@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/lws</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/lws@main/">main</a>
-      <a class="ref-link" href="github.com/kubernetes-sigs/lws@release-0.8/">release-0.8</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/mcp-lifecycle-operator</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/mcp-lifecycle-operator@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/mcs-api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/mcs-api@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/network-policy-api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/network-policy-api@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/node-feature-discovery</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/node-feature-discovery@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/node-feature-discovery-operator</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/node-feature-discovery-operator@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/node-ipam-controller</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/node-ipam-controller@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/node-readiness-controller</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/node-readiness-controller@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/prow</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/prow@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/reference-docs</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/reference-docs@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/referencegrant-poc</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/referencegrant-poc@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/resource-state-metrics</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/resource-state-metrics@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/scheduler-plugins</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/scheduler-plugins@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/secrets-store-csi-driver</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/secrets-store-csi-driver@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/secrets-store-sync-controller</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/secrets-store-sync-controller@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/security-profiles-operator</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/security-profiles-operator@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/sig-windows-dev-tools</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/sig-windows-dev-tools@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/signalhound</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/signalhound@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/usage-metrics-collector</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/usage-metrics-collector@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/vsphere-csi-driver</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/vsphere-csi-driver@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/wg-ai-gateway</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/wg-ai-gateway@main/">main</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/windows-gmsa</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/windows-gmsa@master/">master</a>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-repo">github.com</div>
-    <div class="card-name">kubernetes-sigs/work-api</div>
-    <div class="refs">
-      <a class="ref-link" href="github.com/kubernetes-sigs/work-api@master/">master</a>
-    </div>
-  </div>
-</div>
+<table>
+  <thead>
+    <tr>
+      <th></th>
+      <th>Org</th>
+      <th>Repo</th>
+      <th>Versions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr data-key="github.com/cilium/cilium">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">cilium</td>
+      <td class="col-repo">cilium</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/cilium/cilium@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/GoogleCloudPlatform/gke-networking-api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">GoogleCloudPlatform</td>
+      <td class="col-repo">gke-networking-api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/GoogleCloudPlatform/gke-networking-api@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes/api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes</td>
+      <td class="col-repo">api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes/api@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/about-api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">about-api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/about-api@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/agent-sandbox">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">agent-sandbox</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/agent-sandbox@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/apiserver-builder-alpha">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">apiserver-builder-alpha</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/apiserver-builder-alpha@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/apiserver-runtime">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">apiserver-runtime</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/apiserver-runtime@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/application">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">application</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/application@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/aws-iam-authenticator">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">aws-iam-authenticator</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/aws-iam-authenticator@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/aws-load-balancer-controller">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">aws-load-balancer-controller</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/aws-load-balancer-controller@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/boskos">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">boskos</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/boskos@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-addons">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-addons</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-addons@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-addon-provider-helm">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-addon-provider-helm</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-addon-provider-helm@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-ipam-provider-in-cluster</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-operator">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-operator</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-operator@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-aws">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-aws</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-aws@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-azure">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-azure</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-azure@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-cloudstack">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-cloudstack</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-cloudstack@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-digitalocean">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-digitalocean</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-digitalocean@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-gcp">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-gcp</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-gcp@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-ibmcloud">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-ibmcloud</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-ibmcloud@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-kubemark">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-kubemark</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-kubemark@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-kubevirt">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-kubevirt</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-kubevirt@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-openstack">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-openstack</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-openstack@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-api-provider-vsphere">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-api-provider-vsphere</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-api-provider-vsphere@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/cluster-inventory-api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">cluster-inventory-api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/cluster-inventory-api@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/container-object-storage-interface">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">container-object-storage-interface</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/container-object-storage-interface@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/controller-runtime">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">controller-runtime</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/controller-runtime@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/controller-tools">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">controller-tools</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/controller-tools@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/descheduler">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">descheduler</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/descheduler@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/dra-driver-nvidia-gpu">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">dra-driver-nvidia-gpu</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/dra-driver-nvidia-gpu@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/dra-example-driver">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">dra-example-driver</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/dra-example-driver@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/external-dns">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">external-dns</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/external-dns@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/gateway-api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">gateway-api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/gateway-api@main/">main</a><a class="ref-link" href="github.com/kubernetes-sigs/gateway-api@release-1.4/">release-1.4</a><a class="ref-link" href="github.com/kubernetes-sigs/gateway-api@release-1.5/">release-1.5</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/gateway-api-inference-extension">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">gateway-api-inference-extension</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/gateway-api-inference-extension@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/gcp-filestore-csi-driver">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">gcp-filestore-csi-driver</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/gcp-filestore-csi-driver@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/jobset">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">jobset</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/jobset@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/karpenter">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">karpenter</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/karpenter@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/karpenter-provider-cluster-api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">karpenter-provider-cluster-api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/karpenter-provider-cluster-api@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/karpenter-provider-ibm-cloud">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">karpenter-provider-ibm-cloud</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/karpenter-provider-ibm-cloud@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kernel-module-management">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kernel-module-management</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kernel-module-management@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kjob">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kjob</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kjob@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kro">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kro</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kro@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kube-agentic-networking">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kube-agentic-networking</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kube-agentic-networking@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kube-api-linter">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kube-api-linter</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kube-api-linter@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kube-scheduler-simulator">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kube-scheduler-simulator</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kube-scheduler-simulator@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kube-scheduler-wasm-extension">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kube-scheduler-wasm-extension</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kube-scheduler-wasm-extension@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kube-storage-version-migrator">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kube-storage-version-migrator</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kube-storage-version-migrator@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kubebuilder">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kubebuilder</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kubebuilder@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kubebuilder-declarative-pattern">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kubebuilder-declarative-pattern</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kubebuilder-declarative-pattern@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kueue">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kueue</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kueue@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/kwok">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">kwok</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/kwok@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/lws">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">lws</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/lws@main/">main</a><a class="ref-link" href="github.com/kubernetes-sigs/lws@release-0.8/">release-0.8</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/mcp-lifecycle-operator">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">mcp-lifecycle-operator</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/mcp-lifecycle-operator@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/mcs-api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">mcs-api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/mcs-api@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/network-policy-api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">network-policy-api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/network-policy-api@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/node-feature-discovery">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">node-feature-discovery</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/node-feature-discovery@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/node-feature-discovery-operator">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">node-feature-discovery-operator</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/node-feature-discovery-operator@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/node-ipam-controller">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">node-ipam-controller</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/node-ipam-controller@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/node-readiness-controller">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">node-readiness-controller</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/node-readiness-controller@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/prow">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">prow</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/prow@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/reference-docs">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">reference-docs</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/reference-docs@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/referencegrant-poc">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">referencegrant-poc</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/referencegrant-poc@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/resource-state-metrics">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">resource-state-metrics</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/resource-state-metrics@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/scheduler-plugins">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">scheduler-plugins</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/scheduler-plugins@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/secrets-store-csi-driver">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">secrets-store-csi-driver</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/secrets-store-csi-driver@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/secrets-store-sync-controller">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">secrets-store-sync-controller</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/secrets-store-sync-controller@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/security-profiles-operator">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">security-profiles-operator</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/security-profiles-operator@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/sig-windows-dev-tools">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">sig-windows-dev-tools</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/sig-windows-dev-tools@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/signalhound">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">signalhound</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/signalhound@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/usage-metrics-collector">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">usage-metrics-collector</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/usage-metrics-collector@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/vsphere-csi-driver">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">vsphere-csi-driver</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/vsphere-csi-driver@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/wg-ai-gateway">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">wg-ai-gateway</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/wg-ai-gateway@main/">main</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/windows-gmsa">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">windows-gmsa</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/windows-gmsa@master/">master</a></div></td>
+    </tr>
+    <tr data-key="github.com/kubernetes-sigs/work-api">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">kubernetes-sigs</td>
+      <td class="col-repo">work-api</td>
+      <td><div class="col-refs"><a class="ref-link" href="github.com/kubernetes-sigs/work-api@master/">master</a></div></td>
+    </tr>
+  </tbody>
+</table>
 <a class="gh-link" href="https://github.com/bowei/dock8s" target="_blank" rel="noopener">
   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
   github.com/bowei/dock8s
 </a>
+<script>
+(function() {
+  var STARS_KEY = 'docsite-stars';
+  function getStars() { try { return JSON.parse(localStorage.getItem(STARS_KEY) || '[]'); } catch(e) { return []; } }
+  function setStars(s) { localStorage.setItem(STARS_KEY, JSON.stringify(s)); }
+
+  function applyStars() {
+    var stars = getStars();
+    var tbody = document.querySelector('tbody');
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+
+    rows.forEach(function(row) {
+      var starred = stars.indexOf(row.dataset.key) >= 0;
+      var btn = row.querySelector('.star-btn');
+      btn.textContent = starred ? '★' : '☆';
+      btn.classList.toggle('starred', starred);
+    });
+
+    rows.sort(function(a, b) {
+      var aS = stars.indexOf(a.dataset.key) >= 0 ? 0 : 1;
+      var bS = stars.indexOf(b.dataset.key) >= 0 ? 0 : 1;
+      return aS - bS;
+    });
+    rows.forEach(function(row) { tbody.appendChild(row); });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    applyStars();
+    document.querySelector('tbody').addEventListener('click', function(e) {
+      var btn = e.target.closest('.star-btn');
+      if (!btn) return;
+      var key = btn.closest('tr').dataset.key;
+      var stars = getStars();
+      var idx = stars.indexOf(key);
+      if (idx >= 0) { stars.splice(idx, 1); } else { stars.push(key); }
+      setStars(stars);
+      applyStars();
+    });
+  });
+})();
+</script>
 </body>
 </html>
