@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -291,43 +292,59 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
     margin-bottom: 1.5rem;
     color: #1f2328;
   }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1rem;
-    max-width: 1200px;
-  }
-  .card {
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 1100px;
     background: #fff;
     border: 1px solid #d0d7de;
     border-radius: 6px;
-    padding: 1rem 1.25rem;
+    overflow: hidden;
   }
-  .card-repo {
-    font-size: 0.8rem;
-    color: #57606a;
-    margin-bottom: 0.4rem;
-    word-break: break-all;
-  }
-  .card-name {
-    font-size: 1rem;
+  thead th {
+    text-align: left;
+    font-size: 0.78rem;
     font-weight: 600;
-    margin-bottom: 0.6rem;
-    word-break: break-all;
+    color: #57606a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.6rem 0.75rem;
+    background: #f6f8fa;
+    border-bottom: 1px solid #d0d7de;
   }
-  .refs { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  thead th:first-child { width: 2rem; padding-right: 0; }
+  tbody tr { border-bottom: 1px solid #eaeef2; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f6f8fa; }
+  tbody td { padding: 0.55rem 0.75rem; vertical-align: middle; }
+  tbody td:first-child { padding-right: 0; width: 2rem; }
+  .col-org { width: 14rem; color: #57606a; font-size: 0.88rem; white-space: nowrap; }
+  .col-repo { font-weight: 600; font-size: 0.95rem; }
+  .col-refs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
   .ref-link {
     display: inline-block;
-    padding: 0.2rem 0.6rem;
+    padding: 0.15rem 0.55rem;
     background: #ddf4ff;
     color: #0550ae;
     border: 1px solid #54aeff66;
     border-radius: 2rem;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     text-decoration: none;
     font-weight: 500;
   }
   .ref-link:hover { background: #54aeff33; }
+  .star-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #d0d7de;
+    padding: 0 0.25rem;
+    line-height: 1;
+    transition: color 0.1s;
+  }
+  .star-btn:hover { color: #d4a017; }
+  .star-btn.starred { color: #d4a017; }
   .gh-link {
     position: fixed;
     bottom: 1rem;
@@ -345,23 +362,71 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
 </head>
 <body>
 <h1>API Reference</h1>
-<div class="grid">
-{{- range .}}
-  <div class="card">
-    <div class="card-repo">{{.Domain}}</div>
-    <div class="card-name">{{.Name}}</div>
-    <div class="refs">
-      {{- range .Refs}}
-      <a class="ref-link" href="{{.Href}}">{{.Label}}</a>
-      {{- end}}
-    </div>
-  </div>
-{{- end}}
-</div>
+<table>
+  <thead>
+    <tr>
+      <th></th>
+      <th>Org</th>
+      <th>Repo</th>
+      <th>Versions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{- range .}}
+    <tr data-key="{{.Key}}">
+      <td><button class="star-btn" title="Star this repo" aria-label="Star">☆</button></td>
+      <td class="col-org">{{.Org}}</td>
+      <td class="col-repo">{{.RepoName}}</td>
+      <td><div class="col-refs">{{range .Refs}}<a class="ref-link" href="{{.Href}}">{{.Label}}</a>{{end}}</div></td>
+    </tr>
+    {{- end}}
+  </tbody>
+</table>
 <a class="gh-link" href="https://github.com/bowei/dock8s" target="_blank" rel="noopener">
   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
   github.com/bowei/dock8s
 </a>
+<script>
+(function() {
+  var STARS_KEY = 'docsite-stars';
+  function getStars() { try { return JSON.parse(localStorage.getItem(STARS_KEY) || '[]'); } catch(e) { return []; } }
+  function setStars(s) { localStorage.setItem(STARS_KEY, JSON.stringify(s)); }
+
+  function applyStars() {
+    var stars = getStars();
+    var tbody = document.querySelector('tbody');
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+
+    rows.forEach(function(row) {
+      var starred = stars.indexOf(row.dataset.key) >= 0;
+      var btn = row.querySelector('.star-btn');
+      btn.textContent = starred ? '★' : '☆';
+      btn.classList.toggle('starred', starred);
+    });
+
+    rows.sort(function(a, b) {
+      var aS = stars.indexOf(a.dataset.key) >= 0 ? 0 : 1;
+      var bS = stars.indexOf(b.dataset.key) >= 0 ? 0 : 1;
+      return aS - bS;
+    });
+    rows.forEach(function(row) { tbody.appendChild(row); });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    applyStars();
+    document.querySelector('tbody').addEventListener('click', function(e) {
+      var btn = e.target.closest('.star-btn');
+      if (!btn) return;
+      var key = btn.closest('tr').dataset.key;
+      var stars = getStars();
+      var idx = stars.indexOf(key);
+      if (idx >= 0) { stars.splice(idx, 1); } else { stars.push(key); }
+      setStars(stars);
+      applyStars();
+    });
+  });
+})();
+</script>
 </body>
 </html>
 `))
@@ -372,9 +437,11 @@ type indexRef struct {
 }
 
 type indexEntry struct {
-	Domain string
-	Name   string
-	Refs   []indexRef
+	Domain   string
+	Org      string
+	RepoName string
+	Key      string
+	Refs     []indexRef
 }
 
 // GenerateIndex writes an index.html to outDir linking all generated docs.
@@ -382,12 +449,23 @@ func GenerateIndex(outDir string, repos []RepoEntry) error {
 	var entries []indexEntry
 	for _, r := range repos {
 		relPath := strings.TrimPrefix(r.URL, "https://")
-		// Split into domain and the rest for display.
 		parts := strings.SplitN(relPath, "/", 2)
 		domain := parts[0]
-		name := relPath
+		name := ""
 		if len(parts) == 2 {
 			name = parts[1]
+		}
+
+		// Split name into org and repo. For single-component names (e.g. k8s.io/api
+		// where name="api"), use domain as org.
+		var org, repoName string
+		nameParts := strings.SplitN(name, "/", 2)
+		if len(nameParts) == 2 {
+			org = nameParts[0]
+			repoName = nameParts[1]
+		} else {
+			org = domain
+			repoName = name
 		}
 
 		var refs []indexRef
@@ -398,11 +476,21 @@ func GenerateIndex(outDir string, repos []RepoEntry) error {
 			})
 		}
 		entries = append(entries, indexEntry{
-			Domain: domain,
-			Name:   name,
-			Refs:   refs,
+			Domain:   domain,
+			Org:      org,
+			RepoName: repoName,
+			Key:      relPath,
+			Refs:     refs,
 		})
 	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		oi, oj := strings.ToLower(entries[i].Org), strings.ToLower(entries[j].Org)
+		if oi != oj {
+			return oi < oj
+		}
+		return strings.ToLower(entries[i].RepoName) < strings.ToLower(entries[j].RepoName)
+	})
 
 	f, err := os.Create(filepath.Join(outDir, "index.html"))
 	if err != nil {

@@ -14,7 +14,9 @@ document.body.innerHTML = `
     </div>
   </div>
   <div id="config-dialog-overlay" style="display: none;">
-    <div id="config-dialog-dialog"></div>
+    <div id="config-dialog-dialog">
+      <button id="config-close-btn"></button>
+    </div>
   </div>
   <div id="help-dialog-overlay" style="display: none;">
     <div id="help-dialog-dialog"></div>
