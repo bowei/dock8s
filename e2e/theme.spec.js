@@ -20,6 +20,7 @@ test.describe('theme switching', () => {
   for (const { label, value } of THEMES) {
     test(`selecting ${label} theme updates the stylesheet`, async ({ page }) => {
       await page.goto(`/#${WIDGET}`);
+      await page.locator('#config-btn').click();
       await page.locator('#theme-select').selectOption({ value });
       const href = await page.locator('link[rel="stylesheet"]').getAttribute('href');
       expect(href).toBe(value);
@@ -28,6 +29,7 @@ test.describe('theme switching', () => {
 
   test('theme preference is persisted in localStorage', async ({ page }) => {
     await page.goto(`/#${WIDGET}`);
+    await page.locator('#config-btn').click();
     await page.locator('#theme-select').selectOption({ value: 'theme-dark.css' });
     // Reload and verify the saved theme is restored
     await page.reload();
