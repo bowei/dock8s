@@ -3,6 +3,9 @@ DOCSITE_EXEC := docsite
 THEME_FILES := $(wildcard web/theme-*.less)
 CSS_FILES := $(THEME_FILES:less=css)
 
+NODE_BUILD_IMAGE := dock8s-node
+CONTAINER_ENGINE ?= docker
+
 # Default target
 all: check-setup test build
 
@@ -63,3 +66,32 @@ clean-themes:
 	@echo "[CLEAN] themes"
 	rm -f $(CSS_FILES)
 	@echo "✓ Themes cleaned."
+
+# --- Container-based targets ---
+# Node targets (themes, test-js, test-e2e) run inside a container with lessc and npm.
+# Usage: make container-<target> (e.g. make container-themes, make container-test-js)
+
+.PHONY: node-image
+node-image:
+	@echo "[BUILD] node image $(NODE_BUILD_IMAGE)"
+	$(CONTAINER_ENGINE) build -f Dockerfile.build -t $(NODE_BUILD_IMAGE) .
+
+CONTAINER_NODE = $(CONTAINER_ENGINE) run --rm -u $(shell id -u):$(shell id -g) -v $(CURDIR):/workspace:Z $(NODE_BUILD_IMAGE)
+
+.PHONY: container-themes
+container-themes: node-image
+	@echo "[CONTAINER] themes"
+	$(CONTAINER_NODE) themes
+
+.PHONY: container-test-js
+container-test-js: node-image
+	@echo "[CONTAINER] test-js"
+	$(CONTAINER_NODE) test-js
+
+.PHONY: container-test-e2e
+container-test-e2e: node-image
+	@echo "[CONTAINER] test-e2e"
+	$(CONTAINER_NODE) test-e2e
+
+.PHONY: container-build
+container-build: container-themes $(EXEC) $(DOCSITE_EXEC)
