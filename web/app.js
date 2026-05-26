@@ -240,7 +240,7 @@ function handleKeyDown(event) {
     showHelpDialog();
     return;
   }
-  if (event.key === 't' && event.target.tagName !== 'INPUT') {
+  if (event.key === 'c' && event.target.tagName !== 'INPUT') {
     event.preventDefault();
     showConfigDialog();
     return;
