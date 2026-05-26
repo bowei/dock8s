@@ -1,0 +1,11 @@
+FROM docker.io/library/node:26-trixie
+
+RUN npm install -g less
+
+RUN mkdir -p /tmp/npm-cache && chmod 777 /tmp/npm-cache
+ENV npm_config_cache=/tmp/npm-cache
+ENV HOME=/tmp
+
+WORKDIR /workspace
+
+ENTRYPOINT ["/bin/bash", "-c", "npm install --prefer-offline && make \"$@\"", "--"]
