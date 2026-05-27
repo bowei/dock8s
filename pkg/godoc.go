@@ -187,7 +187,23 @@ func (p *docParser) parseCodeBlock() GoDocElem {
 func (p *docParser) parseList() GoDocElem {
 	var items []string
 
-	for p.pos < len(p.lines) && isListItem(p.lines[p.pos]) {
+	for p.pos < len(p.lines) {
+		if strings.TrimSpace(p.lines[p.pos]) == "" {
+			// Skip blank lines between items only if a list item follows.
+			ahead := p.pos + 1
+			for ahead < len(p.lines) && strings.TrimSpace(p.lines[ahead]) == "" {
+				ahead++
+			}
+			if ahead < len(p.lines) && isListItem(p.lines[ahead]) {
+				p.pos = ahead
+				continue
+			}
+			break
+		}
+		if !isListItem(p.lines[p.pos]) {
+			break
+		}
+
 		var currentItem strings.Builder
 		line := p.lines[p.pos]
 
@@ -213,9 +229,33 @@ func (p *docParser) parseList() GoDocElem {
 
 		for p.pos < len(p.lines) {
 			nextLine := p.lines[p.pos]
+
 			if strings.TrimSpace(nextLine) == "" {
-				break
+				// Look ahead past all blank lines to decide what to do.
+				ahead := p.pos + 1
+				for ahead < len(p.lines) && strings.TrimSpace(p.lines[ahead]) == "" {
+					ahead++
+				}
+				if ahead >= len(p.lines) {
+					break
+				}
+				aheadLine := p.lines[ahead]
+				if isListItem(aheadLine) {
+					break // next item starts; outer loop handles it
+				}
+				aheadTrimmed := strings.TrimLeft(aheadLine, " \t")
+				aheadIndent := len(aheadLine) - len(aheadTrimmed)
+				if aheadIndent >= textIndent {
+					// Blank line(s) followed by indented continuation: paragraph break.
+					currentItem.WriteString("\n\n")
+					currentItem.WriteString(strings.TrimSpace(aheadLine[textIndent:]))
+					p.pos = ahead + 1
+				} else {
+					break // continuation is not indented enough; end item and list
+				}
+				continue
 			}
+
 			if isListItem(nextLine) {
 				break
 			}
@@ -256,6 +296,13 @@ func (p *docParser) parseFencedCodeBlock() GoDocElem {
 	return GoDocElem{Type: GoDocCode, Content: []string{strings.Join(content, "\n")}}
 }
 
+// knownAbbreviations lists common abbreviations that end with a period and
+// could otherwise be mistaken for numbered list markers (e.g. "etc. foo" →
+// marker "etc." + text "foo").
+var knownAbbreviations = []string{
+	"e.g.", "i.e.", "etc.", "vs.", "cf.", "approx.", "no.", "vol.", "fig.", "ch.",
+}
+
 func isListItem(line string) bool {
 	trimmed := strings.TrimLeft(line, " 	")
 	if len(trimmed) == 0 {
@@ -268,6 +315,19 @@ func isListItem(line string) bool {
 		strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "-\t") ||
 		strings.HasPrefix(trimmed, "• ") || strings.HasPrefix(trimmed, "•\t") {
 		return true
+	}
+
+	// Reject lines that start with a known abbreviation followed by space/tab/EOL
+	// before testing for numbered list markers, since abbreviations like "etc. "
+	// would otherwise match the marker pattern below.
+	lower := strings.ToLower(trimmed)
+	for _, abbr := range knownAbbreviations {
+		if strings.HasPrefix(lower, abbr) {
+			rest := lower[len(abbr):]
+			if rest == "" || rest[0] == ' ' || rest[0] == '\t' {
+				return false
+			}
+		}
 	}
 
 	// Numbered lists
