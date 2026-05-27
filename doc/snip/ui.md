@@ -49,7 +49,8 @@ it.
 | `Enter` | Toggle the docstring for the selected field |
 | `/` | Open the search dialog |
 | `?` | Open the help dialog |
-| `Escape` | Close the search or help dialog |
+| `c` | Open the settings dialog |
+| `Escape` | Close the search, help, or settings dialog |
 
 Arrow keys and Enter are inactive while a dialog is open.
 
@@ -78,11 +79,13 @@ See [search.md](search.md) for full details. In summary:
   from root types; selecting a result restores the full column path to that
   field. The same **alpha**, **beta**, and **ref** checkboxes apply.
 
-## Themes
+## Settings
 
-A dropdown in the top bar switches between ten visual themes (Brown, Dark,
-Blue, Green, Light, Monokai, Dracula, Gruvbox, GitHub, l33t). The selection is
-saved to `localStorage` and restored on the next visit.
+A gear button in the top bar (or the `c` key) opens the settings dialog, which
+contains a theme picker. The theme picker switches between twelve visual themes:
+Brown, Dark, Blue, Green, Light, Monokai, Dracula, Gruvbox, GitHub, l33t,
+Kubernetes, and Kubernetes Dark. The selection is saved to `localStorage` and
+restored on the next visit.
 
 ## Live reload
 

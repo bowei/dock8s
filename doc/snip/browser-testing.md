@@ -16,7 +16,7 @@ npx playwright test e2e/search.spec.js  # run a single spec file
 
 `playwright.config.js` defines a `webServer` that runs automatically before tests:
 
-1. `./dock8s -generate e2e/dist -type example.com/widget/v1.Widget e2e/fixture`
+1. `./dock8s -generate e2e/dist -type example.com/widget/v1.Widget -source-url-base https://github.com/example/widget/blob/main e2e/fixture e2e/fixture/v1alpha1 e2e/fixture/v1beta1`
    — generates the full site (HTML + JS + CSS + `data.js`) into `e2e/dist/`
 2. `python3 -m http.server 3001 --directory e2e/dist`
    — serves the site on `http://localhost:3001`
@@ -30,14 +30,16 @@ regenerated.
 `e2e/fixture/` is a self-contained Go module (`module example.com/widget/v1`)
 with enough type variety to exercise the full UI:
 
-| Type | Role |
-|---|---|
-| `Widget` | Root resource (has `TypeMeta` + `ObjectMeta`) |
-| `WidgetList` | Root resource (list variant) |
-| `WidgetSpec` | Nested struct — pointer, slice, map, multi-para doc, deprecated field |
-| `WidgetStatus` | Nested struct — references enum type |
-| `Phase` | Enum (`string` + constants: Pending, Running, Failed) |
-| `TypeMeta`, `ObjectMeta` | Embedded meta types (same package — no external deps) |
+| Type | Package | Role |
+|---|---|---|
+| `Widget` | `v1` | Root resource (has `TypeMeta` + `ObjectMeta`) |
+| `WidgetList` | `v1` | Root resource (list variant) |
+| `WidgetSpec` | `v1` | Nested struct — pointer, slice, map, multi-para doc, deprecated field |
+| `WidgetStatus` | `v1` | Nested struct — references enum type |
+| `Phase` | `v1` | Enum (`string` + constants: Pending, Running, Failed) |
+| `TypeMeta`, `ObjectMeta` | `v1` | Embedded meta types (same package — no external deps) |
+| `AlphaWidget`, `AlphaWidgetSpec` | `v1alpha1` | Root + spec for alpha filter testing |
+| `BetaWidget`, `BetaWidgetSpec` | `v1beta1` | Root + spec for beta filter testing |
 
 The fixture is intentionally self-contained so `go list` works without any
 network access or module cache.
@@ -51,7 +53,7 @@ network access or module cache.
 | `e2e/search.spec.js` | Dialog open/close/filter, Enter navigation, `f:` field search, overlay click |
 | `e2e/keyboard.spec.js` | Arrow navigation, ArrowRight opens column, ArrowLeft removes column, `/` `?` Escape Enter |
 | `e2e/docstring.spec.js` | Expand button, expand/collapse via Enter, paragraph text, deprecated marker |
-| `e2e/theme.spec.js` | All 5 themes switchable, localStorage persistence across reload |
+| `e2e/theme.spec.js` | Theme switching via the settings dialog (5 of 12 themes exercised), localStorage persistence across reload |
 
 ## Key behaviours to be aware of
 
