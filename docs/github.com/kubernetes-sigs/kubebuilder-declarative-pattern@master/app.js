@@ -240,6 +240,11 @@ function handleKeyDown(event) {
     showHelpDialog();
     return;
   }
+  if (event.key === 'c' && event.target.tagName !== 'INPUT') {
+    event.preventDefault();
+    showConfigDialog();
+    return;
+  }
   if (event.key === 'Escape') {
     if (searchDialogOverlay.style.display === 'flex') {
       console.log("'esc' key pressed");
