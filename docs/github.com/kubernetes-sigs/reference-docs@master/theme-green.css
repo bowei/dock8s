@@ -75,7 +75,7 @@ kbd {
   border-radius: 8px;
   overflow-x: auto;
   background-color: #ffffff;
-  width: fit-content;
+  width: 100%;
 }
 .column {
   min-width: 250px;
